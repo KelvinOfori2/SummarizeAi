@@ -1,0 +1,73 @@
+2026-06-07 04:01:11 | INFO     | main | SummarizeAI API starting up
+2026-06-07 04:05:12 | INFO     | http | POST /api/v1/auth/register → 409 [906.1ms] ip=127.0.0.1
+2026-06-07 04:05:28 | INFO     | http | POST /api/v1/auth/login → 200 [1252.9ms] ip=127.0.0.1
+2026-06-07 04:05:28 | INFO     | websocket | WS connected  user=1fa0f855-6359-46f5-b715-2058a299b340  admin=False  total_connections=1
+2026-06-07 04:05:29 | INFO     | http | GET /api/v1/users/me/stats → 200 [457.7ms] ip=127.0.0.1
+2026-06-07 04:05:29 | INFO     | http | GET /api/v1/users/me/activity → 200 [460.9ms] ip=127.0.0.1
+2026-06-07 04:05:29 | INFO     | http | GET /api/v1/users/me → 200 [582.0ms] ip=127.0.0.1
+2026-06-07 04:05:29 | INFO     | http | GET /api/v1/summaries/ → 200 [476.4ms] ip=127.0.0.1
+2026-06-07 04:05:29 | INFO     | http | GET /api/v1/users/me → 200 [14.2ms] ip=127.0.0.1
+2026-06-07 04:05:29 | INFO     | http | GET /api/v1/users/me → 200 [7.7ms] ip=127.0.0.1
+2026-06-07 04:05:44 | INFO     | http | PUT /api/v1/users/me → 200 [40.1ms] ip=127.0.0.1
+2026-06-07 04:05:51 | INFO     | http | PUT /api/v1/users/me → 200 [29.4ms] ip=127.0.0.1
+2026-06-07 04:06:02 | INFO     | http | GET /api/v1/summaries/ → 200 [27.7ms] ip=127.0.0.1
+2026-06-07 04:06:04 | INFO     | http | GET /api/v1/users/me/stats → 200 [29.6ms] ip=127.0.0.1
+2026-06-07 04:06:04 | INFO     | http | GET /api/v1/users/me/activity → 200 [31.6ms] ip=127.0.0.1
+2026-06-07 04:06:06 | INFO     | http | GET /api/v1/summaries/ → 200 [20.0ms] ip=127.0.0.1
+2026-06-07 04:08:46 | INFO     | app.services.summary_service | Summary created [tfidf] user=1fa0f855-6359-46f5-b715-2058a299b340 words=431→188
+2026-06-07 04:08:46 | INFO     | http | POST /api/v1/summaries/ → 201 [1317.0ms] ip=127.0.0.1
+2026-06-07 04:09:04 | INFO     | http | GET /api/v1/summaries/6b2266f3-6590-4870-8f0a-a69975fd180b/export → 200 [6606.5ms] ip=127.0.0.1
+2026-06-07 04:09:04 | INFO     | http | GET /api/v1/summaries/6b2266f3-6590-4870-8f0a-a69975fd180b/export → 200 [64.9ms] ip=127.0.0.1
+2026-06-07 04:09:19 | INFO     | http | GET /api/v1/users/me/stats → 200 [74.5ms] ip=127.0.0.1
+2026-06-07 04:09:19 | INFO     | http | GET /api/v1/users/me/activity → 200 [282.7ms] ip=127.0.0.1
+2026-06-07 04:09:19 | INFO     | http | GET /api/v1/summaries/ → 200 [285.7ms] ip=127.0.0.1
+2026-06-07 04:09:42 | INFO     | http | PUT /api/v1/users/me → 200 [88.0ms] ip=127.0.0.1
+2026-06-07 04:10:05 | INFO     | http | GET /api/v1/summaries/ → 200 [83.0ms] ip=127.0.0.1
+2026-06-07 04:10:08 | INFO     | http | GET /api/v1/summaries/ → 200 [94.2ms] ip=127.0.0.1
+2026-06-07 04:10:08 | INFO     | http | GET /api/v1/users/me/stats → 200 [104.0ms] ip=127.0.0.1
+2026-06-07 04:10:08 | INFO     | http | GET /api/v1/users/me/activity → 200 [119.0ms] ip=127.0.0.1
+2026-06-07 04:10:13 | INFO     | websocket | WS disconnected  user=1fa0f855-6359-46f5-b715-2058a299b340  total_connections=0
+2026-06-07 10:46:34 | INFO     | main | SummarizeAI API starting up
+2026-06-07 10:47:05 | INFO     | http | GET /api/v1/users/me → 401 [398.6ms] ip=127.0.0.1
+2026-06-07 10:47:05 | INFO     | http | GET /api/v1/summaries/ → 401 [40.7ms] ip=127.0.0.1
+2026-06-07 10:47:05 | INFO     | http | GET /api/v1/users/me/activity → 401 [62.4ms] ip=127.0.0.1
+2026-06-07 10:47:05 | INFO     | http | GET /api/v1/users/me/stats → 401 [63.0ms] ip=127.0.0.1
+2026-06-07 10:47:05 | INFO     | http | GET /api/v1/users/me → 401 [17.8ms] ip=127.0.0.1
+2026-06-07 10:47:05 | INFO     | http | POST /api/v1/auth/refresh → 200 [245.8ms] ip=127.0.0.1
+2026-06-07 10:47:05 | INFO     | http | POST /api/v1/auth/refresh → 200 [531.6ms] ip=127.0.0.1
+2026-06-07 10:47:05 | INFO     | http | POST /api/v1/auth/refresh → 200 [531.1ms] ip=127.0.0.1
+2026-06-07 10:47:05 | INFO     | http | POST /api/v1/auth/refresh → 200 [545.6ms] ip=127.0.0.1
+2026-06-07 10:47:06 | INFO     | http | POST /api/v1/auth/refresh → 200 [557.9ms] ip=127.0.0.1
+2026-06-07 10:47:06 | INFO     | http | GET /api/v1/users/me → 200 [122.0ms] ip=127.0.0.1
+2026-06-07 10:47:06 | INFO     | http | GET /api/v1/users/me/activity → 200 [259.7ms] ip=127.0.0.1
+2026-06-07 10:47:06 | INFO     | http | GET /api/v1/users/me/stats → 200 [283.4ms] ip=127.0.0.1
+2026-06-07 10:47:06 | INFO     | http | GET /api/v1/summaries/ → 200 [332.2ms] ip=127.0.0.1
+2026-06-07 10:47:06 | INFO     | http | GET /api/v1/users/me → 200 [173.0ms] ip=127.0.0.1
+2026-06-07 10:48:30 | INFO     | http | GET /api/v1/summaries/ → 200 [266.7ms] ip=127.0.0.1
+2026-06-07 10:48:36 | INFO     | http | GET /api/v1/summaries/6b2266f3-6590-4870-8f0a-a69975fd180b → 200 [55.4ms] ip=127.0.0.1
+2026-06-07 10:57:25 | INFO     | http | GET /api/v1/users/me/activity → 200 [248.6ms] ip=127.0.0.1
+2026-06-07 10:57:25 | INFO     | http | GET /api/v1/users/me/stats → 200 [244.9ms] ip=127.0.0.1
+2026-06-07 10:57:25 | INFO     | http | GET /api/v1/summaries/ → 200 [52.0ms] ip=127.0.0.1
+2026-06-07 10:59:31 | INFO     | http | POST /api/v1/auth/login → 200 [892.4ms] ip=127.0.0.1
+2026-06-07 10:59:31 | INFO     | websocket | WS connected  user=eaa2026e-5a98-4cfe-babc-a0fe84358ec9  admin=True  total_connections=1
+2026-06-07 10:59:31 | INFO     | http | GET /api/v1/users/me → 200 [81.6ms] ip=127.0.0.1
+2026-06-07 10:59:31 | INFO     | http | GET /api/v1/users/me/stats → 200 [101.2ms] ip=127.0.0.1
+2026-06-07 10:59:32 | INFO     | http | GET /api/v1/users/me → 200 [35.3ms] ip=127.0.0.1
+2026-06-07 10:59:32 | INFO     | http | GET /api/v1/users/me → 200 [47.4ms] ip=127.0.0.1
+2026-06-07 10:59:32 | INFO     | http | GET /api/v1/users/me → 200 [59.2ms] ip=127.0.0.1
+2026-06-07 10:59:32 | INFO     | http | GET /api/v1/users/me/activity → 200 [517.7ms] ip=127.0.0.1
+2026-06-07 10:59:32 | INFO     | http | GET /api/v1/summaries/ → 200 [586.5ms] ip=127.0.0.1
+2026-06-07 10:59:32 | INFO     | http | GET /api/v1/admin/analytics → 200 [254.1ms] ip=127.0.0.1
+2026-06-07 10:59:32 | INFO     | http | GET /api/v1/users/me → 200 [132.3ms] ip=127.0.0.1
+2026-06-07 11:00:07 | INFO     | http | GET /api/v1/admin/users → 200 [22.8ms] ip=127.0.0.1
+2026-06-07 11:00:15 | INFO     | http | GET /api/v1/admin/summaries → 200 [46.6ms] ip=127.0.0.1
+2026-06-07 11:00:17 | INFO     | http | GET /api/v1/admin/logs → 200 [27.8ms] ip=127.0.0.1
+2026-06-07 11:00:19 | INFO     | http | GET /api/v1/admin/settings → 200 [51.0ms] ip=127.0.0.1
+2026-06-07 11:01:01 | INFO     | http | GET /api/v1/admin/logs → 200 [11.5ms] ip=127.0.0.1
+2026-06-07 11:01:31 | INFO     | http | GET /api/v1/admin/logs → 200 [17.5ms] ip=127.0.0.1
+2026-06-07 11:16:02 | INFO     | http | GET /api/v1/admin/logs → 200 [423.5ms] ip=127.0.0.1
+2026-06-07 11:16:05 | INFO     | http | GET /api/v1/admin/settings → 200 [63.2ms] ip=127.0.0.1
+2026-06-07 11:16:18 | INFO     | http | PUT /api/v1/admin/settings/max_uploads_per_day → 200 [154.6ms] ip=127.0.0.1
+2026-06-07 11:16:18 | INFO     | http | GET /api/v1/admin/settings → 200 [15.3ms] ip=127.0.0.1
+2026-06-07 11:16:51 | INFO     | http | GET /api/v1/admin/analytics → 200 [68.6ms] ip=127.0.0.1
+2026-06-07 11:17:03 | INFO     | websocket | WS disconnected  user=eaa2026e-5a98-4cfe-babc-a0fe84358ec9  total_connections=0
