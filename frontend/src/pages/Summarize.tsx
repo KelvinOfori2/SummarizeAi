@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
+import { AnimatePresence, motion } from 'framer-motion'
 import { useMutation } from '@tanstack/react-query'
 import { summariesApi } from '@/api/summaries'
 import { Spinner, AlgoBadge, Modal } from '@/components/ui'
@@ -9,16 +9,16 @@ import axios from 'axios'
 import { Zap, Upload, FileText, X, ChevronDown, Copy, Download, BarChart2, Clock, Layers } from 'lucide-react'
 
 const ALGORITHMS = [
-  { id: 'tfidf',   label: 'TF-IDF',  desc: 'Best for technical docs' },
-  { id: 'lsa',     label: 'LSA',     desc: 'Semantic relationships'  },
-  { id: 'lexrank', label: 'LexRank', desc: 'News & articles'         },
-  { id: 'luhn',    label: 'Luhn',    desc: 'Short focused text'      },
+  { id: 'tfidf',   label: 'TF-IDF',   desc: 'Good for technical and structured documents' },
+  { id: 'lsa',     label: 'LSA',      desc: 'Captures latent semantic relationships'       },
+  { id: 'lexrank', label: 'LexRank',  desc: 'Graph-based, works well for news & articles'  },
+  { id: 'luhn',    label: 'Luhn',     desc: 'Heuristic, best for shorter focused text'      },
 ]
 
 export default function Summarize() {
-  const [tab, setTab] = useState<'text'|'file'>('text')
+  const [tab, setTab] = useState<'text' | 'file'>('text')
   const [text, setText] = useState('')
-  const [file, setFile] = useState<File|null>(null)
+  const [file, setFile] = useState<File | null>(null)
   const [algorithm, setAlgorithm] = useState('tfidf')
   const [ratio, setRatio] = useState(0.3)
   const [title, setTitle] = useState('')
@@ -30,28 +30,33 @@ export default function Summarize() {
 
   const textMutation = useMutation({
     mutationFn: () => summariesApi.create({ text, algorithm, summary_ratio: ratio, title: title || undefined }),
-    onSuccess: (res) => { setResult(res.data); toast.success('Summary generated!') },
-    onError: (err) => { if (axios.isAxiosError(err)) toast.error(err.response?.data?.detail || 'Failed'); else toast.error('Error occurred') },
+    onSuccess: (res) => { setResult(res.data); toast.success('Done') },
+    onError: (err) => { if (axios.isAxiosError(err)) toast.error(err.response?.data?.detail || 'Failed'); else toast.error('Something went wrong') },
   })
   const fileMutation = useMutation({
     mutationFn: () => summariesApi.uploadFile(file!, algorithm, ratio, title || undefined),
-    onSuccess: (res) => { setResult(res.data); toast.success('Summary generated!') },
-    onError: (err) => { if (axios.isAxiosError(err)) toast.error(err.response?.data?.detail || 'Failed'); else toast.error('Error occurred') },
+    onSuccess: (res) => { setResult(res.data); toast.success('Done') },
+    onError: (err) => { if (axios.isAxiosError(err)) toast.error(err.response?.data?.detail || 'Failed'); else toast.error('Something went wrong') },
   })
 
   const loading = textMutation.isPending || fileMutation.isPending
 
   const handleSubmit = () => {
-    if (tab === 'text') { if (text.trim().length < 50) { toast.error('Text too short (min 50 chars)'); return }; textMutation.mutate() }
-    else { if (!file) { toast.error('Please select a file'); return }; fileMutation.mutate() }
+    if (tab === 'text') {
+      if (text.trim().length < 50) { toast.error('Text is too short (minimum 50 characters)'); return }
+      textMutation.mutate()
+    } else {
+      if (!file) { toast.error('Select a file first'); return }
+      fileMutation.mutate()
+    }
   }
 
-  const handleExport = async (format: 'txt'|'pdf'|'docx') => {
+  const handleExport = async (format: 'txt' | 'pdf' | 'docx') => {
     if (!result) return
     try {
       const res = await summariesApi.export(result.id, format)
-      downloadBlob(res.data, `summary_${result.id.slice(0,8)}.${format}`)
-      toast.success(`Exported as ${format.toUpperCase()}`)
+      downloadBlob(res.data, `summary_${result.id.slice(0, 8)}.${format}`)
+      toast.success(`Exported as .${format}`)
       setShowExportModal(false)
     } catch { toast.error('Export failed') }
   }
@@ -59,22 +64,22 @@ export default function Summarize() {
   return (
     <div className="max-w-3xl mx-auto space-y-5">
       {/* Header */}
-      <motion.div initial={{ opacity: 0, y: -12 }} animate={{ opacity: 1, y: 0 }}>
-        <p className="text-xs font-mono text-brand-400 uppercase tracking-widest mb-1">NLP Engine</p>
-        <h1 className="font-display font-bold text-2xl md:text-3xl text-white">Summarize Text</h1>
-        <p className="text-white/40 mt-1 text-sm">Paste text or upload a document to generate an AI-powered summary.</p>
-      </motion.div>
+      <div>
+        <h1 className="font-display font-semibold text-2xl text-white">New summary</h1>
+        <p className="text-sm text-white/40 mt-0.5">Paste text or upload a document.</p>
+      </div>
 
-      {/* Input */}
-      <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
-        className="glass rounded-2xl p-4 md:p-6">
+      {/* Input card */}
+      <div className="bg-dark-900 border border-dark-800 rounded-lg p-5">
         {/* Tabs */}
-        <div className="flex gap-2 mb-4">
-          {(['text','file'] as const).map(t => (
+        <div className="flex gap-1 mb-4 border-b border-dark-800 pb-3">
+          {(['text', 'file'] as const).map(t => (
             <button key={t} onClick={() => setTab(t)}
-              className={`flex-1 sm:flex-none px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 touch-target
-                ${tab === t ? 'bg-brand-500/20 text-brand-400 border border-brand-500/30' : 'text-white/40 hover:text-white glass'}`}>
-              {t === 'text' ? <><FileText className="w-4 h-4 inline mr-1.5" />Text</> : <><Upload className="w-4 h-4 inline mr-1.5" />File</>}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded text-sm font-medium transition-colors duration-150
+                ${tab === t
+                  ? 'bg-dark-800 text-white'
+                  : 'text-white/35 hover:text-white/70 hover:bg-dark-800/50'}`}>
+              {t === 'text' ? <><FileText className="w-3.5 h-3.5" />Text</> : <><Upload className="w-3.5 h-3.5" />File</>}
             </button>
           ))}
         </div>
@@ -82,61 +87,71 @@ export default function Summarize() {
         {tab === 'text' ? (
           <div>
             <textarea value={text} onChange={e => setText(e.target.value)}
-              placeholder="Paste your text here... (minimum 50 characters)"
-              rows={6} className="input-field resize-none font-body leading-relaxed" />
+              placeholder="Paste your document text here…"
+              rows={8} className="input-field resize-none font-body leading-relaxed" />
             <div className="flex justify-between items-center mt-2">
-              <span className="text-xs text-white/30 font-mono">{wordCount} words</span>
-              {text && <button onClick={() => setText('')} className="text-xs text-white/30 hover:text-red-400 transition-colors flex items-center gap-1"><X className="w-3 h-3"/>Clear</button>}
+              <span className="text-xs text-white/25 font-mono">{wordCount} words</span>
+              {text && (
+                <button onClick={() => setText('')}
+                  className="text-xs text-white/25 hover:text-red-400 transition-colors flex items-center gap-1">
+                  <X className="w-3 h-3" />Clear
+                </button>
+              )}
             </div>
           </div>
         ) : (
           <div>
-            <input ref={fileRef} type="file" accept=".txt,.pdf,.docx" className="hidden" onChange={e => setFile(e.target.files?.[0] || null)} />
+            <input ref={fileRef} type="file" accept=".txt,.pdf,.docx" className="hidden"
+              onChange={e => setFile(e.target.files?.[0] || null)} />
             {file ? (
-              <div className="flex items-center gap-3 p-4 rounded-xl bg-brand-500/10 border border-brand-500/20">
-                <FileText className="w-8 h-8 text-brand-400 shrink-0" />
+              <div className="flex items-center gap-3 p-3.5 rounded-lg border border-dark-700 bg-dark-800">
+                <FileText className="w-6 h-6 text-white/30 shrink-0" />
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-white truncate">{file.name}</p>
-                  <p className="text-xs text-white/40">{(file.size/1024).toFixed(1)} KB</p>
+                  <p className="text-xs text-white/30 font-mono">{(file.size / 1024).toFixed(1)} KB</p>
                 </div>
-                <button onClick={() => setFile(null)} className="p-2 rounded-lg hover:bg-white/10 text-white/40 hover:text-white touch-target"><X className="w-4 h-4"/></button>
+                <button onClick={() => setFile(null)}
+                  className="p-1.5 rounded hover:bg-dark-700 text-white/30 hover:text-white transition-colors">
+                  <X className="w-3.5 h-3.5" />
+                </button>
               </div>
             ) : (
               <button onClick={() => fileRef.current?.click()}
-                className="w-full border-2 border-dashed border-white/10 hover:border-brand-500/40 rounded-xl p-8 flex flex-col items-center gap-3 transition-all hover:bg-brand-500/5 group touch-target">
-                <Upload className="w-8 h-8 text-white/20 group-hover:text-brand-400 transition-colors" />
+                className="w-full border border-dashed border-dark-700 hover:border-brand-500/40 rounded-lg p-10 flex flex-col items-center gap-3 transition-colors duration-150 hover:bg-dark-800/40 group">
+                <Upload className="w-6 h-6 text-white/20 group-hover:text-brand-400 transition-colors" />
                 <div className="text-center">
-                  <p className="text-sm text-white/50">Tap to upload</p>
-                  <p className="text-xs text-white/30 mt-1">TXT, PDF, DOCX — up to 10MB</p>
+                  <p className="text-sm text-white/40">Click to upload</p>
+                  <p className="text-xs text-white/25 mt-1 font-mono">TXT · PDF · DOCX (max 10 MB)</p>
                 </div>
               </button>
             )}
           </div>
         )}
-      </motion.div>
+      </div>
 
       {/* Options */}
-      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.15 }}
-        className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         {/* Algorithm */}
         <div className="relative">
           <label className="label">Algorithm</label>
-          <button onClick={() => setShowAlgoMenu(!showAlgoMenu)} className="input-field flex items-center justify-between text-left touch-target">
-            <span className="font-medium text-white text-sm">{ALGORITHMS.find(a=>a.id===algorithm)?.label}</span>
-            <ChevronDown className={`w-4 h-4 text-white/40 transition-transform ${showAlgoMenu?'rotate-180':''}`} />
+          <button onClick={() => setShowAlgoMenu(!showAlgoMenu)}
+            className="input-field flex items-center justify-between text-left">
+            <span className="text-white text-sm">{ALGORITHMS.find(a => a.id === algorithm)?.label}</span>
+            <ChevronDown className={`w-3.5 h-3.5 text-white/30 transition-transform ${showAlgoMenu ? 'rotate-180' : ''}`} />
           </button>
           <AnimatePresence>
             {showAlgoMenu && (
-              <motion.div initial={{opacity:0,y:-8}} animate={{opacity:1,y:0}} exit={{opacity:0,y:-8}}
-                className="absolute z-30 top-full mt-1 w-full glass rounded-xl border border-white/10 overflow-hidden shadow-2xl">
+              <motion.div initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -4 }}
+                transition={{ duration: 0.1 }}
+                className="absolute z-30 top-full mt-1 w-full bg-dark-900 border border-dark-700 rounded-lg overflow-hidden shadow-modal">
                 {ALGORITHMS.map(a => (
                   <button key={a.id} onClick={() => { setAlgorithm(a.id); setShowAlgoMenu(false) }}
-                    className={`w-full text-left px-4 py-3 hover:bg-white/[0.05] transition-colors touch-target ${algorithm===a.id?'bg-brand-500/10':''}`}>
+                    className={`w-full text-left px-4 py-3 hover:bg-dark-800 transition-colors ${algorithm === a.id ? 'bg-dark-800' : ''}`}>
                     <div className="flex items-center gap-2">
                       <AlgoBadge algorithm={a.id} />
-                      {algorithm===a.id && <span className="text-xs text-brand-400">✓</span>}
+                      {algorithm === a.id && <span className="text-xs text-brand-400 font-mono">✓</span>}
                     </div>
-                    <p className="text-xs text-white/40 mt-1">{a.desc}</p>
+                    <p className="text-xs text-white/35 mt-1">{a.desc}</p>
                   </button>
                 ))}
               </motion.div>
@@ -146,45 +161,49 @@ export default function Summarize() {
 
         {/* Ratio */}
         <div>
-          <label className="label">Length — <span className="text-brand-400 font-mono">{Math.round(ratio*100)}%</span></label>
-          <div className="flex items-center gap-2 mt-3">
-            <span className="text-xs text-white/30 font-mono">5%</span>
+          <label className="label">
+            Length: <span className="text-brand-400 font-mono normal-case tracking-normal">{Math.round(ratio * 100)}%</span>
+          </label>
+          <div className="flex items-center gap-2 mt-3.5">
+            <span className="text-xs text-white/25 font-mono">5%</span>
             <input type="range" min={0.05} max={0.95} step={0.05} value={ratio}
               onChange={e => setRatio(parseFloat(e.target.value))}
-              className="flex-1 accent-brand-500 cursor-pointer" style={{height:'4px'}} />
-            <span className="text-xs text-white/30 font-mono">95%</span>
+              className="flex-1 accent-brand-500 cursor-pointer h-px" />
+            <span className="text-xs text-white/25 font-mono">95%</span>
           </div>
         </div>
 
         {/* Title */}
         <div>
           <label className="label">Title (optional)</label>
-          <input type="text" value={title} onChange={e => setTitle(e.target.value)} placeholder="My summary..." className="input-field" />
+          <input type="text" value={title} onChange={e => setTitle(e.target.value)}
+            placeholder="Untitled" className="input-field" />
         </div>
-      </motion.div>
+      </div>
 
       {/* Submit */}
       <button onClick={handleSubmit} disabled={loading}
-        className="btn-primary w-full sm:w-auto text-base px-8 py-3.5 shadow-neon-teal disabled:opacity-60 disabled:cursor-not-allowed touch-target">
-        {loading ? <><Spinner size="sm"/>Generating...</> : <><Zap className="w-5 h-5"/>Generate Summary</>}
+        className="btn-primary disabled:opacity-50 disabled:cursor-not-allowed px-6 py-2.5">
+        {loading ? <><Spinner size="sm" />Summarizing…</> : <><Zap className="w-4 h-4" />Summarize</>}
       </button>
 
       {/* Result */}
       <AnimatePresence>
         {result && (
-          <motion.div initial={{opacity:0,y:24}} animate={{opacity:1,y:0}} exit={{opacity:0}} className="space-y-4">
-            {/* Stats row */}
+          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+            className="space-y-3">
+            {/* Stats */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
               {[
-                {icon:<Layers className="w-4 h-4"/>, label:'Original', value:`${result.original_word_count}w`},
-                {icon:<FileText className="w-4 h-4"/>, label:'Summary', value:`${result.summary_word_count}w`},
-                {icon:<BarChart2 className="w-4 h-4"/>, label:'Saved', value:compressionPercent(result.compression_ratio)},
-                {icon:<Clock className="w-4 h-4"/>, label:'Time', value:`${result.processing_time}s`},
+                { icon: <Layers className="w-3.5 h-3.5" />,   label: 'Original', value: `${result.original_word_count}w` },
+                { icon: <FileText className="w-3.5 h-3.5" />, label: 'Summary',  value: `${result.summary_word_count}w`  },
+                { icon: <BarChart2 className="w-3.5 h-3.5" />,label: 'Saved',    value: compressionPercent(result.compression_ratio) },
+                { icon: <Clock className="w-3.5 h-3.5" />,    label: 'Time',     value: `${result.processing_time}s`     },
               ].map(s => (
-                <div key={s.label} className="glass rounded-xl p-3 flex items-center gap-2">
-                  <span className="text-brand-400 shrink-0">{s.icon}</span>
+                <div key={s.label} className="bg-dark-900 border border-dark-800 rounded-lg p-3 flex items-center gap-2">
+                  <span className="text-white/25 shrink-0">{s.icon}</span>
                   <div className="min-w-0">
-                    <p className="text-xs text-white/40">{s.label}</p>
+                    <p className="text-xs text-white/30">{s.label}</p>
                     <p className="text-sm font-mono font-medium text-white truncate">{s.value}</p>
                   </div>
                 </div>
@@ -192,40 +211,45 @@ export default function Summarize() {
             </div>
 
             {/* Summary text */}
-            <div className="glass rounded-2xl p-4 md:p-6 border border-brand-500/20">
-              <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+            <div className="bg-dark-900 border border-dark-800 rounded-lg p-5">
+              <div className="flex flex-wrap items-center justify-between gap-3 mb-4 pb-3 border-b border-dark-800">
                 <div className="flex items-center gap-2">
-                  <h3 className="font-display font-semibold text-white">Summary</h3>
+                  <span className="font-display font-semibold text-white text-sm">Summary</span>
                   <AlgoBadge algorithm={result.algorithm} />
                 </div>
-                <div className="flex items-center gap-2">
-                  <button onClick={() => { navigator.clipboard.writeText(result.summary_text); toast.success('Copied!') }}
-                    className="flex items-center gap-1.5 px-3 py-2 rounded-lg glass text-xs text-white/60 hover:text-white transition-all touch-target">
-                    <Copy className="w-3.5 h-3.5"/>Copy
+                <div className="flex items-center gap-1.5">
+                  <button
+                    onClick={() => { navigator.clipboard.writeText(result.summary_text); toast.success('Copied') }}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded border border-dark-700 text-xs text-white/40 hover:text-white hover:border-dark-600 transition-colors">
+                    <Copy className="w-3 h-3" />Copy
                   </button>
                   <button onClick={() => setShowExportModal(true)}
-                    className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-brand-500/20 border border-brand-500/30 text-xs text-brand-400 hover:bg-brand-500/30 transition-all touch-target">
-                    <Download className="w-3.5 h-3.5"/>Export
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded border border-brand-500/30 bg-brand-500/10 text-xs text-brand-400 hover:bg-brand-500/20 transition-colors">
+                    <Download className="w-3 h-3" />Export
                   </button>
                 </div>
               </div>
-              <p className="text-white/80 leading-relaxed text-sm whitespace-pre-wrap">{result.summary_text}</p>
+              <p className="text-white/80 leading-relaxed text-sm whitespace-pre-wrap font-body">{result.summary_text}</p>
             </div>
           </motion.div>
         )}
       </AnimatePresence>
 
       {/* Export Modal */}
-      <Modal open={showExportModal} onClose={() => setShowExportModal(false)} title="Export Summary">
-        <p className="text-sm text-white/50 mb-4">Choose a format to download your summary.</p>
-        <div className="space-y-2">
-          {([['txt','Plain Text (.txt)','Universally compatible'],['pdf','PDF Document (.pdf)','Formatted with metadata'],['docx','Word Document (.docx)','Editable in Microsoft Word']] as const).map(([fmt,label,desc]) => (
+      <Modal open={showExportModal} onClose={() => setShowExportModal(false)} title="Export summary">
+        <p className="text-sm text-white/40 mb-4">Choose a download format.</p>
+        <div className="space-y-1.5">
+          {([
+            ['txt',  'Plain text (.txt)',     'Universally compatible'],
+            ['pdf',  'PDF document (.pdf)',   'Formatted with metadata'],
+            ['docx', 'Word document (.docx)', 'Editable in Microsoft Word'],
+          ] as const).map(([fmt, label, desc]) => (
             <button key={fmt} onClick={() => handleExport(fmt as any)}
-              className="w-full glass glass-hover rounded-xl p-4 text-left flex items-start gap-3 touch-target">
-              <Download className="w-4 h-4 text-brand-400 mt-0.5 shrink-0"/>
+              className="w-full bg-dark-800 hover:bg-dark-700 border border-dark-700 rounded-lg p-3.5 text-left flex items-start gap-3 transition-colors">
+              <Download className="w-3.5 h-3.5 text-white/30 mt-0.5 shrink-0" />
               <div>
-                <p className="text-sm font-medium text-white">{label}</p>
-                <p className="text-xs text-white/40">{desc}</p>
+                <p className="text-sm text-white">{label}</p>
+                <p className="text-xs text-white/35">{desc}</p>
               </div>
             </button>
           ))}
