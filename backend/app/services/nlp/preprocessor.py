@@ -27,7 +27,7 @@ def clean_text(text: str) -> str:
 
 def tokenize_sentences(text: str) -> List[str]:
     sentences = sent_tokenize(text)
-    return [s.strip() for s in sentences if len(s.strip()) > 10]
+    return [s.strip() for s in sentences if len(s.strip()) > 30]
 
 
 def tokenize_words(text: str) -> List[str]:

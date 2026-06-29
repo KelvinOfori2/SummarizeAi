@@ -47,6 +47,65 @@ def _extract_txt(raw: bytes) -> str:
     raise HTTPException(status_code=400, detail="Cannot decode text file — unsupported encoding")
 
 
+def _clean_pdf_text(text: str) -> str:
+    import re
+    from collections import Counter
+
+    lines = text.splitlines()
+    stripped = [l.strip() for l in lines]
+
+    # Lines appearing 3+ times are repeated headers/footers
+    counts = Counter(l for l in stripped if l)
+    repeated = {l for l, n in counts.items() if n >= 3 and len(l) < 120}
+
+    kept = []
+    for line in stripped:
+        if not line:
+            kept.append("")
+            continue
+        if line in repeated:
+            continue
+        # Standalone page numbers
+        if re.fullmatch(r"\d{1,3}", line):
+            continue
+        # Section-number-only lines like "4" or "4.1"
+        if re.fullmatch(r"\d+(\.\d+)*", line):
+            continue
+        # CVSS / vector strings
+        if re.match(r"^(CVSS:|Vector:)", line):
+            continue
+        # Lines with very low alphabetic content — table data, hex, code artifacts
+        alpha_ratio = sum(c.isalpha() for c in line) / max(len(line), 1)
+        if alpha_ratio < 0.25 and len(line) < 100:
+            continue
+        kept.append(line)
+
+    # Merge lines that are continuations (no sentence-ending punctuation,
+    # next line starts with a lowercase letter)
+    merged: list[str] = []
+    i = 0
+    while i < len(kept):
+        line = kept[i]
+        if not line:
+            merged.append("")
+            i += 1
+            continue
+        while (
+            i + 1 < len(kept)
+            and kept[i + 1]
+            and not re.search(r"[.!?]\s*$", line)
+            and kept[i + 1][0].islower()
+        ):
+            i += 1
+            line = line + " " + kept[i]
+        merged.append(line)
+        i += 1
+
+    result = "\n".join(merged)
+    result = re.sub(r"\n{3,}", "\n\n", result)
+    return result.strip()
+
+
 def _extract_pdf(raw: bytes) -> str:
     try:
         import fitz  # PyMuPDF
@@ -58,7 +117,7 @@ def _extract_pdf(raw: bytes) -> str:
         text = "\n".join(pages)
         if not text.strip():
             raise HTTPException(status_code=400, detail="PDF appears to be scanned/image-only. No text extracted.")
-        return text
+        return _clean_pdf_text(text)
     except ImportError:
         raise HTTPException(status_code=500, detail="PDF processing library not available")
     except Exception as e:
