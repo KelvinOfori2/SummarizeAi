@@ -1,6 +1,6 @@
-# SummarizeAI — Automatic Text Summarization System
+# SummarizeAI
 
-A full-stack NLP-powered web application. Final-year project built to production-grade SaaS standards.
+A web app for automatic text summarization. Built as a final-year project using Python, FastAPI, and React.
 
 ---
 
@@ -14,7 +14,7 @@ Install these before anything else:
 | Node.js | 18 or 20 | https://nodejs.org/ |
 | PostgreSQL | 14, 15, or 16 | https://www.postgresql.org/download/windows/ |
 
-> **Windows tip:** When installing PostgreSQL, note your password for the `postgres` user — you will need it.
+> **Windows tip:** When installing PostgreSQL, note the password you set for the `postgres` user. You will need it in step 1.
 
 ---
 
@@ -38,7 +38,7 @@ summarize-ai/
 
 ---
 
-## Setup — Step by Step
+## Setup
 
 ### 1. Configure the backend
 
@@ -90,11 +90,11 @@ python app.py
 ```
 
 On first run this will:
-- ✓ Connect to PostgreSQL
-- ✓ Download NLTK language data automatically
-- ✓ Create all database tables
-- ✓ Create the admin account
-- ✓ Start the API server at **http://localhost:8000**
+- Connect to PostgreSQL
+- Download NLTK language data
+- Create all database tables
+- Seed the admin account
+- Start the API server at http://localhost:8000
 
 You should see:
 
@@ -225,8 +225,8 @@ Double-click `start.bat` to launch both servers in separate windows.
 
 The interactive API docs are available while the backend is running:
 
-- **Swagger UI** — http://localhost:8000/api/docs
-- **ReDoc**      — http://localhost:8000/api/redoc
+- Swagger UI: http://localhost:8000/api/docs
+- ReDoc: http://localhost:8000/api/redoc
 
 ### Key Endpoints
 
@@ -255,9 +255,9 @@ The interactive API docs are available while the backend is running:
 
 ## Tech Stack
 
-**Backend:** Python 3.11 · FastAPI · SQLAlchemy · PostgreSQL · NLTK · Scikit-learn · Sumy · JWT
+Backend: Python 3.11, FastAPI, SQLAlchemy, PostgreSQL, NLTK, Scikit-learn, Sumy, JWT
 
-**Frontend:** React 18 · TypeScript · Vite · Tailwind CSS · Framer Motion · React Query · Zustand
+Frontend: React 18, TypeScript, Vite, Tailwind CSS, Framer Motion, React Query, Zustand
 
 ---
 
