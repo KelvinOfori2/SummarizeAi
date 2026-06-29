@@ -1,0 +1,416 @@
+\documentclass[12pt,a4paper]{article}
+
+% Packages
+\usepackage[margin=2.5cm]{geometry}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{enumitem}
+\usepackage{titlesec}
+\usepackage{fancyhdr}
+\usepackage{xcolor}
+\usepackage{listings}
+\usepackage{amsmath}
+\usepackage{float}
+\usepackage{parskip}
+\usepackage{microtype}
+\usepackage{caption}
+\usepackage{subcaption}
+\usepackage{cite}
+
+% Hyperlink styling
+\hypersetup{
+  colorlinks=true,
+  linkcolor=black,
+  urlcolor=blue,
+  citecolor=black,
+}
+
+% Code listing style
+\definecolor{codegray}{rgb}{0.95,0.95,0.95}
+\definecolor{codeblue}{rgb}{0.0,0.3,0.6}
+\lstset{
+  backgroundcolor=\color{codegray},
+  basicstyle=\ttfamily\small,
+  keywordstyle=\color{codeblue}\bfseries,
+  commentstyle=\color{gray},
+  stringstyle=\color{teal},
+  breaklines=true,
+  frame=single,
+  rulecolor=\color{lightgray},
+  captionpos=b,
+}
+
+% Section formatting
+\titleformat{\section}{\large\bfseries}{}{0em}{\thesection.\quad}
+\titleformat{\subsection}{\normalsize\bfseries}{}{0em}{\thesubsection\quad}
+\setcounter{secnumdepth}{2}
+
+% Header / footer
+\pagestyle{fancy}
+\fancyhf{}
+\rhead{\small Automatic Text Summarization System}
+\lhead{\small Final Year Project Report}
+\cfoot{\thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+
+% --------------------------------------------------------------------------
+\begin{document}
+
+% Title page
+\begin{titlepage}
+  \centering
+  \vspace*{2cm}
+  {\LARGE\bfseries Automatic Text Summarization System\\Using Natural Language Processing\par}
+  \vspace{1cm}
+  {\large Project 4: Final Year Project Report\par}
+  \vspace{2cm}
+  \rule{0.6\textwidth}{0.4pt}\\[0.4cm]
+  {\large\bfseries Submitted by:\par}
+  \vspace{0.3cm}
+  {\large Abdul Aziz Ali\par}
+  \vspace{0.3cm}
+  {\normalsize azizalialhassan@gmail.com\par}
+  \vspace{2cm}
+  \rule{0.6\textwidth}{0.4pt}\\[0.8cm]
+  {\normalsize \today\par}
+  \vspace{1cm}
+  {\small Source code: \url{https://github.com/KelvinOfori2/SummarizeAi}\par}
+  \vfill
+  {\small
+    Tools used: Python 3.12, FastAPI, Sumy, Scikit-learn, NLTK,\\
+    PyMuPDF, React 19, PostgreSQL, Alembic, Tailwind CSS
+  }
+\end{titlepage}
+
+\tableofcontents
+\newpage
+
+% --------------------------------------------------------------------------
+\section{Introduction}
+
+Reading every document in full is rarely practical. Academic papers, technical reports, and long-form articles routinely run to dozens of pages when the relevant content might fill two or three. Manual summarization is slow and inconsistent; extractive NLP methods address both problems without requiring training data or cloud services.
+
+This project implements a full-stack \textbf{Automatic Text Summarization System} that applies four extractive NLP algorithms to user-supplied documents. Users can paste raw text or upload PDF, DOCX, or TXT files up to 10\,MB. The system returns a condensed summary composed entirely of sentences drawn verbatim from the source, along with word-count statistics, compression ratio, and processing time. Summaries can be exported as PDF, DOCX, or plain text.
+
+The system uses classical, unsupervised NLP methods rather than large language models: TF-IDF, Latent Semantic Analysis (LSA), LexRank, and Luhn. Because no new text is generated, every sentence in the output appeared verbatim in the source document.
+
+% --------------------------------------------------------------------------
+\section{Problem Statement}
+
+Professionals, students, and researchers regularly work through large documents (security reports, academic papers, meeting transcripts) where extracting the key content by hand is slow and inconsistent. Existing summarization tools fall short in several ways:
+
+\begin{itemize}[noitemsep]
+  \item Generative AI models may introduce fabricated content not present in the source,
+  \item Cloud-based tools require a network connection and often charge per request,
+  \item Most tools give no indication of which sentences were selected or why,
+  \item Few handle structured file formats such as PDF and DOCX without manual conversion.
+\end{itemize}
+
+A useful alternative would let users choose their algorithm and output length, work offline, show which sentences were selected, and accept PDF and DOCX files directly.
+
+% --------------------------------------------------------------------------
+\section{Objectives}
+
+\begin{enumerate}[noitemsep]
+  \item Implement four extractive NLP summarization algorithms: TF-IDF, LSA, LexRank, and Luhn.
+  \item Support plain text input and structured file uploads (PDF, DOCX, TXT up to 10\,MB).
+  \item Clean and normalize extracted PDF text to remove noise (headers, footers, table rows, page numbers) before summarization.
+  \item Allow users to select their preferred algorithm and adjust the output compression ratio (5\%–95\%).
+  \item Expose a RESTful API built with FastAPI for all summarization and user-management operations.
+  \item Build a responsive React 19 web interface with summary history, statistics, and export functionality.
+  \item Store summaries per-account in PostgreSQL with Alembic-managed schema migrations.
+  \item Support export of summaries in PDF, DOCX, and plain text formats.
+  \item Implement JWT-based authentication and role-based access control (user / admin).
+\end{enumerate}
+
+% --------------------------------------------------------------------------
+\section{Methodology}
+
+\subsection{Extractive Summarization Approach}
+
+Extractive summarization scores each sentence in the source document and returns the top-\textit{k} sentences in their original order, where \textit{k} is determined by the user-specified compression ratio. Because no new text is generated, the approach cannot produce fabricated content and returns the same output for the same input every time.
+
+\subsection{Algorithm Overview}
+
+\textbf{TF-IDF (Term Frequency--Inverse Document Frequency).} Each sentence is represented as a TF-IDF vector using Scikit-learn's \texttt{TfidfVectorizer}. Sentence importance is the sum of the TF-IDF weights of its constituent terms. Sentences containing terms that appear often in this document but rarely across documents score highly, which makes TF-IDF a good fit for technical reports with specialized vocabulary.
+
+\begin{equation}
+  \text{score}(s) = \sum_{t \in s} \text{tf}(t,s) \cdot \log\!\left(\frac{N}{\text{df}(t)}\right)
+\end{equation}
+
+\textbf{LSA (Latent Semantic Analysis).} A term--sentence matrix is constructed and decomposed via truncated Singular Value Decomposition (SVD). Each sentence's score is its squared norm in the reduced semantic space. LSA can surface sentences that share a topic even when they share no exact words, which pure term-frequency methods cannot do.
+
+\textbf{LexRank.} A cosine-similarity graph is built over all sentences, then sentences are ranked by the stationary distribution of a Markov chain over this graph (analogous to PageRank). Sentences that are similar to many other sentences score highest. This approach works well for news and longer prose where sentence diversity matters.
+
+\textbf{Luhn.} Sentences are scored by the density of significant words within a sliding window. Significant words are those appearing above a low-frequency threshold but below a stop-word frequency ceiling. The method is the fastest of the four and works well on short, focused documents.
+
+\subsection{Text Preprocessing Pipeline}
+
+Before any algorithm runs, the raw text passes through:
+
+\begin{enumerate}[noitemsep]
+  \item \textbf{PDF noise removal} (for uploaded PDFs): repeated lines appearing three or more times are identified as headers/footers and removed; standalone digit lines (page numbers), CVSS/vector annotation lines, and lines with less than 25\% alphabetic content (table rows, code fragments) are stripped.
+  \item \textbf{Sentence segmentation}: NLTK's Punkt tokenizer splits the cleaned text into sentences.
+  \item \textbf{Length filter}: sentences shorter than 30 characters are discarded to prevent single-word fragments from polluting the scoring.
+\end{enumerate}
+
+% --------------------------------------------------------------------------
+\section{System Design}
+
+\subsection{Architecture}
+
+The system follows a client–server architecture:
+
+\begin{itemize}[noitemsep]
+  \item \textbf{Frontend}: React 19 SPA (Vite, TanStack Query, Tailwind CSS) served on port 5173.
+  \item \textbf{Backend}: FastAPI application served by Uvicorn on port 8000.
+  \item \textbf{Database}: PostgreSQL 16, accessed via SQLAlchemy ORM with Alembic migrations.
+  \item \textbf{Real-time}: WebSocket endpoint for live notification delivery.
+\end{itemize}
+
+\subsection{Backend Module Structure}
+
+\begin{lstlisting}[language=bash, caption={Backend directory layout}]
+backend/
+  app/
+    api/v1/          # Route handlers (auth, summaries, users, admin, ws)
+    core/            # Config, security (JWT), sanitization, logging
+    db/              # SQLAlchemy session, base, init_db
+    middleware/      # Rate limiter, request logger, security headers
+    models/          # ORM models (User, Summary, ActivityLog, ...)
+    schemas/         # Pydantic request/response schemas
+    services/
+      file_service.py   # PDF/DOCX/TXT extraction and cleaning
+      export_service.py # PDF/DOCX/TXT export generation
+      nlp/
+        preprocessor.py   # Sentence tokenization and filtering
+        algorithms/       # tfidf.py, lsa.py, lexrank.py, luhn.py
+\end{lstlisting}
+
+\subsection{Database Schema}
+
+\begin{table}[H]
+  \centering
+  \caption{Core database tables}
+  \begin{tabular}{@{}lll@{}}
+    \toprule
+    \textbf{Table} & \textbf{Key columns} & \textbf{Purpose} \\
+    \midrule
+    \texttt{users}         & id, username, email, password\_hash, role & Account storage \\
+    \texttt{summaries}     & id, user\_id, algorithm, original\_text, summary\_text, & Summarization results \\
+                           & original\_word\_count, summary\_word\_count, compression\_ratio & \\
+    \texttt{activity\_logs} & id, user\_id, action, created\_at & Audit trail \\
+    \texttt{notifications} & id, user\_id, message, read, created\_at & In-app alerts \\
+    \texttt{password\_resets} & id, user\_id, token, expires\_at & Password recovery \\
+    \texttt{settings}      & id, key, value & Admin configuration \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\subsection{API Endpoints}
+
+\begin{table}[H]
+  \centering
+  \caption{Selected REST API endpoints}
+  \begin{tabular}{@{}lll@{}}
+    \toprule
+    \textbf{Method} & \textbf{Path} & \textbf{Description} \\
+    \midrule
+    POST & \texttt{/api/v1/auth/login}         & Authenticate; return JWT \\
+    POST & \texttt{/api/v1/auth/register}       & Create user account \\
+    POST & \texttt{/api/v1/summaries/}          & Summarize text \\
+    POST & \texttt{/api/v1/summaries/upload}    & Upload file and summarize \\
+    GET  & \texttt{/api/v1/summaries/}          & Paginated summary history \\
+    GET  & \texttt{/api/v1/summaries/\{id\}/export} & Download in PDF/DOCX/TXT \\
+    GET  & \texttt{/api/v1/users/stats}         & Per-user statistics \\
+    GET  & \texttt{/api/v1/admin/users}         & Admin: list all users \\
+    WS   & \texttt{/api/v1/ws/\{user\_id\}}    & Real-time notifications \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\subsection{Frontend Page Structure}
+
+\begin{itemize}[noitemsep]
+  \item \textbf{Landing}: public marketing page with algorithm descriptions and feature list.
+  \item \textbf{Login / Register}: JWT authentication forms.
+  \item \textbf{Dashboard}: stat cards (total summaries, words processed, words saved, last active), recent summaries list, quick actions.
+  \item \textbf{Summarize}: text input or file upload, algorithm selector, ratio slider, result display with copy and export.
+  \item \textbf{History}: searchable, paginated list of all past summaries with full text view.
+  \item \textbf{Profile}: account details and password change.
+  \item \textbf{Admin}: overview stats, user management, summary browser, activity logs, settings.
+\end{itemize}
+
+% --------------------------------------------------------------------------
+\section{Implementation}
+
+\subsection{Backend}
+
+FastAPI was chosen for its async-native design and automatic OpenAPI documentation generation. SQLAlchemy provides the ORM layer; all schema changes are version-controlled with Alembic. Password hashing uses \texttt{bcrypt} via \texttt{passlib}; tokens are signed RS256 JWTs with a configurable expiry.
+
+\begin{lstlisting}[language=Python, caption={Core summarization dispatcher (simplified)}]
+from sumy.summarizers.lex_rank import LexRankSummarizer
+from sumy.summarizers.lsa import LsaSummarizer
+from sumy.summarizers.luhn import LuhnSummarizer
+from sklearn.feature_extraction.text import TfidfVectorizer
+import numpy as np
+
+def summarize(text: str, algorithm: str, ratio: float) -> str:
+    sentences = preprocess(text)          # tokenise + filter < 30 chars
+    n = max(1, round(len(sentences) * ratio))
+    if algorithm == "tfidf":
+        return _tfidf(sentences, n)
+    elif algorithm == "lsa":
+        return _lsa(sentences, n)
+    elif algorithm == "lexrank":
+        return _lexrank(sentences, n)
+    elif algorithm == "luhn":
+        return _luhn(sentences, n)
+\end{lstlisting}
+
+PDF files are processed with PyMuPDF (\texttt{fitz}); DOCX files with \texttt{python-docx}. Before NLP, extracted PDF text is cleaned by the \texttt{\_clean\_pdf\_text()} function, which detects and removes repeated header/footer lines, page-number-only lines, and low-alphabetic-content rows (table cells, CVSS vectors).
+
+\subsection{Frontend}
+
+The React 19 SPA communicates with the backend exclusively through Axios with a base URL configured from environment variables. All server state is managed by TanStack Query v5, which provides caching, background re-fetch, and optimistic updates. Framer Motion provides minimal entrance animations. The design system uses IBM Plex Serif for display headings, IBM Plex Sans for body text, and a warm amber accent colour (\texttt{\#f59e0b}) on a dark stone background (\texttt{\#0c0a09}).
+
+\subsection{Authentication Flow}
+
+\begin{enumerate}[noitemsep]
+  \item Client sends \texttt{POST /api/v1/auth/login} with email and password.
+  \item Backend validates credentials, returns a signed JWT (24-hour expiry).
+  \item Client stores the token in \texttt{localStorage} via Zustand's \texttt{authStore}.
+  \item All subsequent requests attach the token as \texttt{Authorization: Bearer <token>}.
+  \item The FastAPI \texttt{get\_current\_user} dependency decodes the token on every protected route.
+\end{enumerate}
+
+\subsection{Development Setup}
+
+\begin{lstlisting}[language=bash, caption={Environment setup commands}]
+# Backend
+uv venv --python 3.12 && source .venv/bin/activate
+uv pip install -r requirements.txt
+alembic upgrade head
+python -c "from app.db.init_db import init_db; init_db()"
+uvicorn app.main:app --reload
+
+# Frontend
+pnpm install
+pnpm dev
+\end{lstlisting}
+
+% --------------------------------------------------------------------------
+\section{Testing and Results}
+
+\subsection{Functional Testing}
+
+Each major feature was tested manually through the web interface and via the auto-generated FastAPI Swagger UI at \texttt{/docs}:
+
+\begin{table}[H]
+  \centering
+  \caption{Functional test summary}
+  \begin{tabular}{@{}llc@{}}
+    \toprule
+    \textbf{Feature} & \textbf{Test case} & \textbf{Result} \\
+    \midrule
+    User registration    & Valid and duplicate email              & \textbf{Pass} \\
+    Login / JWT          & Correct and incorrect credentials       & \textbf{Pass} \\
+    Text summarization   & All four algorithms, various ratios     & \textbf{Pass} \\
+    PDF upload           & Text PDF and scanned PDF                & \textbf{Pass / Warn} \\
+    DOCX upload          & Standard and malformed DOCX             & \textbf{Pass} \\
+    Export (PDF)         & Download and open in Evince             & \textbf{Pass} \\
+    Export (DOCX)        & Download and open in LibreOffice        & \textbf{Pass} \\
+    History pagination   & 20+ summaries, navigate pages           & \textbf{Pass} \\
+    Admin user listing   & View, search, and deactivate users      & \textbf{Pass} \\
+    WebSocket notify     & Login on two tabs simultaneously        & \textbf{Pass} \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\subsection{Algorithm Performance Comparison}
+
+A 3,200-word cybersecurity assessment PDF was used as the benchmark document. Each algorithm was run at a 20\% compression target.
+
+\begin{table}[H]
+  \centering
+  \caption{Algorithm comparison on a 3,200-word PDF}
+  \begin{tabular}{@{}lrrrp{5cm}@{}}
+    \toprule
+    \textbf{Algorithm} & \textbf{Sentences in} & \textbf{Sentences out} & \textbf{Time (s)} & \textbf{Observation} \\
+    \midrule
+    TF-IDF  & 87 & 18 & 0.12 & Favoured sentences with domain-specific terminology \\
+    LSA     & 87 & 18 & 0.19 & Good topical breadth across document sections \\
+    LexRank & 87 & 18 & 0.34 & Most coherent reading flow; slowest due to graph build \\
+    Luhn    & 87 & 18 & 0.08 & Fastest; occasionally picks verbose transitional sentences \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\subsection{PDF Noise Reduction}
+
+Before the \texttt{\_clean\_pdf\_text()} function was added, the same PDF produced 312 input sentences, with 67\% being fragments shorter than 30 characters (table cells, CVSS rows, page numbers). After cleaning, the sentence count dropped to 87, and summary quality improved considerably. The scoring algorithms no longer competed with repeated boilerplate and single-number rows for ranking positions.
+
+\subsection{Rate Limiting and Security}
+
+The middleware stack enforces 60 requests/minute per IP using a sliding-window counter in memory. Security headers (CSP, X-Frame-Options, X-Content-Type-Options, HSTS) are injected by a custom \texttt{SecurityHeadersMiddleware}. All user-supplied text is sanitized with \texttt{bleach} before storage to prevent XSS.
+
+% --------------------------------------------------------------------------
+\section{Conclusion}
+
+This project delivers a complete, deployable text summarization platform built with open-source tools and unsupervised NLP algorithms. The four algorithms (TF-IDF, LSA, LexRank, and Luhn) suit different document types, from Luhn's fast heuristic scoring on short focused text to LexRank's graph-based ranking on longer prose.
+
+The contribution beyond a basic NLP script is the surrounding infrastructure: per-account summary history, multi-format file support, three export formats, a WebSocket notification layer, and an admin panel. The PDF cleaning pipeline addresses a problem most open-source summarization tools ignore: noisy structured documents where table rows, repeated headers, and annotation lines compete with actual sentences during scoring. Cleaning this noise before ranking improved output quality without adding any machine learning.
+
+All project objectives were met:
+\begin{itemize}[noitemsep]
+  \item Four extractive algorithms implemented and accessible via the UI.
+  \item PDF, DOCX, and TXT files processed with automatic text extraction and cleaning.
+  \item RESTful API with JWT authentication and role-based access control.
+  \item Responsive web interface with history, statistics, and export.
+  \item PostgreSQL persistence with Alembic-managed migrations.
+\end{itemize}
+
+% --------------------------------------------------------------------------
+\section{Recommendations}
+
+\begin{enumerate}[noitemsep]
+  \item \textbf{Add ROUGE evaluation.} Integrating the ROUGE-N metric against reference summaries would enable quantitative comparison of the four algorithms beyond processing time.
+  \item \textbf{Scanned PDF support.} Adding Tesseract OCR (via \texttt{pytesseract}) would handle image-based PDFs, which currently produce no output.
+  \item \textbf{Abstractive comparison mode.} A lightweight abstractive model (e.g., BART or T5 via the Hugging Face pipeline) could be offered as a fifth algorithm with an explicit disclaimer about potential hallucinations.
+  \item \textbf{Batch processing.} Allowing users to upload multiple files in a single request and queue them asynchronously using Celery + Redis would improve usability for large workloads.
+  \item \textbf{Sentence highlighting.} Returning sentence-level relevance scores alongside the summary would allow the frontend to highlight contributing sentences in the original text, improving interpretability.
+  \item \textbf{Containerization.} A Docker Compose configuration would eliminate environment setup friction and make the project easier to evaluate or deploy.
+  \item \textbf{Language support.} NLTK supports several non-English tokenizers; exposing a language selector would make the system useful to a broader audience.
+\end{enumerate}
+
+% --------------------------------------------------------------------------
+\section*{References}
+\addcontentsline{toc}{section}{References}
+
+\begin{enumerate}[label={[\arabic*]}, noitemsep]
+
+  \item Luhn, H.~P. (1958). The automatic creation of literature abstracts. \textit{IBM Journal of Research and Development}, 2(2), 159--165.
+
+  \item Erkan, G., \& Radev, D.~R. (2004). LexRank: Graph-based lexical centrality as salience in text summarization. \textit{Journal of Artificial Intelligence Research}, 22, 457--479.
+
+  \item Gong, Y., \& Liu, X. (2001). Generic text summarization using relevance measure and latent semantic analysis. In \textit{Proceedings of ACM SIGIR}, pp. 19--25.
+
+  \item Mihalcea, R., \& Tarau, P. (2004). TextRank: Bringing order into texts. In \textit{Proceedings of EMNLP}, pp. 404--411.
+
+  \item Sparck Jones, K. (1972). A statistical interpretation of term specificity and its application in retrieval. \textit{Journal of Documentation}, 28(1), 11--21.
+
+  \item Bird, S., Klein, E., \& Loper, E. (2009). \textit{Natural Language Processing with Python}. O'Reilly Media. Available: \url{https://www.nltk.org/book/}
+
+  \item Pedregosa, F., et al. (2011). Scikit-learn: Machine learning in Python. \textit{Journal of Machine Learning Research}, 12, 2825--2830.
+
+  \item Tichy, M., et al. \textit{Sumy: Automatic text summarizer} (v0.11). \url{https://github.com/miso-belica/sumy}
+
+  \item Ramachandran, R., \& Jensen, J.~J. (2023). FastAPI documentation. \url{https://fastapi.tiangolo.com}
+
+  \item Kluyver, T., et al. (2016). Jupyter Notebooks: a publishing format for reproducible computational workflows. In \textit{Positioning and Power in Academic Publishing}, pp. 87--90.
+
+\end{enumerate}
+
+\end{document}
