@@ -12,6 +12,12 @@ warnings.filterwarnings("ignore", category=UserWarning, module="requests")
 warnings.filterwarnings("ignore", message="urllib3")
 
 from app.core.config import settings
+import app.models.user          # noqa: F401
+import app.models.summary       # noqa: F401
+import app.models.activity_log  # noqa: F401
+import app.models.password_reset  # noqa: F401
+import app.models.setting       # noqa: F401
+import app.models.notification  # noqa: F401
 from app.core.logging import setup_logging, get_logger
 from app.middleware.rate_limiter import limiter, rate_limit_exceeded_handler
 from app.middleware.request_logger import RequestLoggerMiddleware
