@@ -1,6 +1,6 @@
 # SummarizeAI
 
-A web app for automatic text summarization. Built as a final-year project using Python, FastAPI, and React.
+A web app for automatic text summarization. Built using Python, FastAPI, and React.
 
 ---
 
