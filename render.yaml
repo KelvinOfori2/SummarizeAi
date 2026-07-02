@@ -70,11 +70,11 @@ services:
       # Proxy REST calls straight through to the backend service
       - type: rewrite
         source: /api/*
-        destination: "https://summarizeai-backend.onrender.com/api/:splat"
+        destination: "https://summarizeai-backend.onrender.com/api/*"
       # Proxy uploaded file/avatar requests to the backend service
       - type: rewrite
         source: /uploads/*
-        destination: "https://summarizeai-backend.onrender.com/uploads/:splat"
+        destination: "https://summarizeai-backend.onrender.com/uploads/*"
       # SPA fallback so client-side routing works on refresh/deep links
       - type: rewrite
         source: /*
