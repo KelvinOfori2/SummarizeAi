@@ -4,7 +4,7 @@ from typing import List
 
 # Ensure required NLTK data is present
 def _ensure_nltk_data():
-    for pkg in ["punkt_tab", "stopwords"]:
+    for pkg in ["punkt", "punkt_tab", "stopwords"]:
         try:
             nltk.download(pkg, quiet=True)
         except Exception:
