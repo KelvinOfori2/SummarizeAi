@@ -1,8 +1,8 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { useMutation } from '@tanstack/react-query'
 import { summariesApi } from '@/api/summaries'
-import { Spinner, AlgoBadge, Modal } from '@/components/ui'
+import { Spinner, Skeleton, AlgoBadge, Modal } from '@/components/ui'
 import { compressionPercent, downloadBlob } from '@/utils/helpers'
 import toast from 'react-hot-toast'
 import axios from 'axios'
@@ -14,6 +14,38 @@ const ALGORITHMS = [
   { id: 'lexrank', label: 'LexRank',  desc: 'Graph-based, works well for news & articles'  },
   { id: 'luhn',    label: 'Luhn',     desc: 'Heuristic, best for shorter focused text'      },
 ]
+
+const PROCESSING_STEPS = [
+  'Reading document…',
+  'Tokenizing sentences…',
+  'Scoring importance…',
+  'Assembling summary…',
+]
+
+function ProcessingPanel() {
+  const [step, setStep] = useState(0)
+  useEffect(() => {
+    const id = setInterval(() => setStep(s => (s + 1) % PROCESSING_STEPS.length), 1800)
+    return () => clearInterval(id)
+  }, [])
+  return (
+    <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+      className="bg-dark-900 border border-dark-800 rounded-lg p-6 flex flex-col items-center gap-4">
+      <Spinner size="lg" />
+      <AnimatePresence mode="wait">
+        <motion.p key={step} initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -4 }}
+          transition={{ duration: 0.15 }} className="text-sm text-white/40 font-mono">
+          {PROCESSING_STEPS[step]}
+        </motion.p>
+      </AnimatePresence>
+      <div className="w-full max-w-xs space-y-2">
+        <Skeleton className="h-3 w-full" />
+        <Skeleton className="h-3 w-5/6" />
+        <Skeleton className="h-3 w-2/3" />
+      </div>
+    </motion.div>
+  )
+}
 
 export default function Summarize() {
   const [tab, setTab] = useState<'text' | 'file'>('text')
@@ -74,8 +106,8 @@ export default function Summarize() {
         {/* Tabs */}
         <div className="flex gap-1 mb-4 border-b border-dark-800 pb-3">
           {(['text', 'file'] as const).map(t => (
-            <button key={t} onClick={() => setTab(t)}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded text-sm font-medium transition-colors duration-150
+            <button key={t} disabled={loading} onClick={() => setTab(t)}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded text-sm font-medium transition-colors duration-150 disabled:opacity-40 disabled:cursor-not-allowed
                 ${tab === t
                   ? 'bg-dark-800 text-white'
                   : 'text-white/35 hover:text-white/70 hover:bg-dark-800/50'}`}>
@@ -86,14 +118,14 @@ export default function Summarize() {
 
         {tab === 'text' ? (
           <div>
-            <textarea value={text} onChange={e => setText(e.target.value)}
+            <textarea value={text} onChange={e => setText(e.target.value)} disabled={loading}
               placeholder="Paste your document text here…"
-              rows={8} className="input-field resize-none font-body leading-relaxed" />
+              rows={8} className="input-field resize-none font-body leading-relaxed disabled:opacity-50" />
             <div className="flex justify-between items-center mt-2">
               <span className="text-xs text-white/25 font-mono">{wordCount} words</span>
               {text && (
-                <button onClick={() => setText('')}
-                  className="text-xs text-white/25 hover:text-red-400 transition-colors flex items-center gap-1">
+                <button onClick={() => setText('')} disabled={loading}
+                  className="text-xs text-white/25 hover:text-red-400 transition-colors flex items-center gap-1 disabled:opacity-40 disabled:cursor-not-allowed">
                   <X className="w-3 h-3" />Clear
                 </button>
               )}
@@ -101,7 +133,7 @@ export default function Summarize() {
           </div>
         ) : (
           <div>
-            <input ref={fileRef} type="file" accept=".txt,.pdf,.docx" className="hidden"
+            <input ref={fileRef} type="file" accept=".txt,.pdf,.docx" className="hidden" disabled={loading}
               onChange={e => setFile(e.target.files?.[0] || null)} />
             {file ? (
               <div className="flex items-center gap-3 p-3.5 rounded-lg border border-dark-700 bg-dark-800">
@@ -110,14 +142,14 @@ export default function Summarize() {
                   <p className="text-sm font-medium text-white truncate">{file.name}</p>
                   <p className="text-xs text-white/30 font-mono">{(file.size / 1024).toFixed(1)} KB</p>
                 </div>
-                <button onClick={() => setFile(null)}
-                  className="p-1.5 rounded hover:bg-dark-700 text-white/30 hover:text-white transition-colors">
+                <button onClick={() => setFile(null)} disabled={loading}
+                  className="p-1.5 rounded hover:bg-dark-700 text-white/30 hover:text-white transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
                   <X className="w-3.5 h-3.5" />
                 </button>
               </div>
             ) : (
-              <button onClick={() => fileRef.current?.click()}
-                className="w-full border border-dashed border-dark-700 hover:border-brand-500/40 rounded-lg p-10 flex flex-col items-center gap-3 transition-colors duration-150 hover:bg-dark-800/40 group">
+              <button onClick={() => fileRef.current?.click()} disabled={loading}
+                className="w-full border border-dashed border-dark-700 hover:border-brand-500/40 rounded-lg p-10 flex flex-col items-center gap-3 transition-colors duration-150 hover:bg-dark-800/40 group disabled:opacity-40 disabled:cursor-not-allowed">
                 <Upload className="w-6 h-6 text-white/20 group-hover:text-brand-400 transition-colors" />
                 <div className="text-center">
                   <p className="text-sm text-white/40">Click to upload</p>
@@ -134,8 +166,8 @@ export default function Summarize() {
         {/* Algorithm */}
         <div className="relative">
           <label className="label">Algorithm</label>
-          <button onClick={() => setShowAlgoMenu(!showAlgoMenu)}
-            className="input-field flex items-center justify-between text-left">
+          <button onClick={() => setShowAlgoMenu(!showAlgoMenu)} disabled={loading}
+            className="input-field flex items-center justify-between text-left disabled:opacity-40 disabled:cursor-not-allowed">
             <span className="text-white text-sm">{ALGORITHMS.find(a => a.id === algorithm)?.label}</span>
             <ChevronDown className={`w-3.5 h-3.5 text-white/30 transition-transform ${showAlgoMenu ? 'rotate-180' : ''}`} />
           </button>
@@ -166,9 +198,9 @@ export default function Summarize() {
           </label>
           <div className="flex items-center gap-2 mt-3.5">
             <span className="text-xs text-white/25 font-mono">5%</span>
-            <input type="range" min={0.05} max={0.95} step={0.05} value={ratio}
+            <input type="range" min={0.05} max={0.95} step={0.05} value={ratio} disabled={loading}
               onChange={e => setRatio(parseFloat(e.target.value))}
-              className="flex-1 accent-brand-500 cursor-pointer h-px" />
+              className="flex-1 accent-brand-500 cursor-pointer h-px disabled:opacity-40 disabled:cursor-not-allowed" />
             <span className="text-xs text-white/25 font-mono">95%</span>
           </div>
         </div>
@@ -176,8 +208,8 @@ export default function Summarize() {
         {/* Title */}
         <div>
           <label className="label">Title (optional)</label>
-          <input type="text" value={title} onChange={e => setTitle(e.target.value)}
-            placeholder="Untitled" className="input-field" />
+          <input type="text" value={title} onChange={e => setTitle(e.target.value)} disabled={loading}
+            placeholder="Untitled" className="input-field disabled:opacity-50" />
         </div>
       </div>
 
@@ -187,9 +219,14 @@ export default function Summarize() {
         {loading ? <><Spinner size="sm" />Summarizing…</> : <><Zap className="w-4 h-4" />Summarize</>}
       </button>
 
+      {/* Processing */}
+      <AnimatePresence>
+        {loading && <ProcessingPanel />}
+      </AnimatePresence>
+
       {/* Result */}
       <AnimatePresence>
-        {result && (
+        {!loading && result && (
           <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
             className="space-y-3">
             {/* Stats */}
