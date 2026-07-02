@@ -172,7 +172,7 @@ Before any algorithm runs, the raw text passes through:
 
 \subsection{Architecture}
 
-The system follows a client–server architecture:
+The system follows a client-server architecture:
 
 \begin{itemize}[noitemsep]
   \item \textbf{Frontend}: React 19 SPA (Vite, TanStack Query, Tailwind CSS) served on port 5173.
@@ -368,6 +368,20 @@ Before the \texttt{\_clean\_pdf\_text()} function was added, the same PDF produc
 The middleware stack enforces 60 requests/minute per IP using a sliding-window counter in memory. Security headers (CSP, X-Frame-Options, X-Content-Type-Options, HSTS) are injected by a custom \texttt{SecurityHeadersMiddleware}. All user-supplied text is sanitized with \texttt{bleach} before storage to prevent XSS.
 
 % --------------------------------------------------------------------------
+\section{Limitations}
+
+All four implemented algorithms are \textit{extractive}: they select and reorder existing sentences rather than generating new text. This keeps the system fast, dependency-light, and free of hallucination risk, but it caps summary quality in ways worth stating explicitly.
+
+\begin{enumerate}[noitemsep]
+  \item \textbf{No semantic understanding.} Sentences are ranked by word-frequency statistics (TF-IDF, Luhn), latent-semantic vector geometry (LSA), or graph centrality (LexRank), not by a model that understands what the text means. There is no transformer- or embedding-based component anywhere in the pipeline, which is what most contemporary summarization systems (e.g., BART, T5, GPT-based models) rely on.
+  \item \textbf{Coherence gaps.} Although sentence order is preserved during selection, the extracted sentences originate from different parts of the source document. Stitching them together can produce dangling pronouns and references (e.g., "He argued that...") whose antecedent was in a sentence that was not selected, and can create abrupt topic transitions that a human editor would smooth over.
+  \item \textbf{No compression or paraphrasing.} Because whole sentences are the unit of selection, a long sentence with only a few salient words is included in full. The system cannot shorten a sentence to its essential clause the way an abstractive summarizer can, so the compression ratio reflects sentence count rather than genuine information density.
+  \item \textbf{Fixed, user-set ratio.} The summary length is a percentage chosen by the user rather than a length the algorithm derives from how much salient content the document actually contains, so short, information-dense documents and long, repetitive ones are compressed by the same rule.
+\end{enumerate}
+
+These limitations are inherent to the extractive paradigm rather than implementation defects, and were an accepted trade-off given the project's scope: a comparative study of classical, unsupervised summarization techniques rather than a competitor to modern LLM-based abstractive summarization. Section~\ref{sec:recommendations} outlines how an abstractive mode could be added alongside the existing algorithms in future work.
+
+% --------------------------------------------------------------------------
 \section{Conclusion}
 
 This project delivers a complete, deployable text summarization platform built with open-source tools and unsupervised NLP algorithms. The four algorithms (TF-IDF, LSA, LexRank, and Luhn) suit different document types, from Luhn's fast heuristic scoring on short focused text to LexRank's graph-based ranking on longer prose.
@@ -384,7 +398,7 @@ All project objectives were met:
 \end{itemize}
 
 % --------------------------------------------------------------------------
-\section{Recommendations}
+\section{Recommendations}\label{sec:recommendations}
 
 \begin{enumerate}[noitemsep]
   \item \textbf{Add ROUGE evaluation.} Integrating the ROUGE-N metric against reference summaries would enable quantitative comparison of the four algorithms beyond processing time.
