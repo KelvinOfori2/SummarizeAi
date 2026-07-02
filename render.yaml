@@ -1,0 +1,81 @@
+databases:
+  - name: summarizeai-db
+    plan: free
+    databaseName: summarize_ai
+    user: summarizeai
+
+services:
+  # ── Backend API (FastAPI) ───────────────────────────────────────────────
+  - type: web
+    name: summarizeai-backend
+    runtime: python
+    plan: free
+    rootDir: backend
+    buildCommand: "pip install -r requirements.txt && alembic upgrade head"
+    startCommand: "uvicorn app.main:app --host 0.0.0.0 --port $PORT"
+    healthCheckPath: /api/v1/health
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.6
+      - key: DATABASE_URL
+        fromDatabase:
+          name: summarizeai-db
+          property: connectionString
+      - key: SECRET_KEY
+        generateValue: true
+      - key: APP_ENV
+        value: production
+      - key: DEBUG
+        value: "false"
+      - key: ALGORITHM
+        value: HS256
+      - key: ACCESS_TOKEN_EXPIRE_MINUTES
+        value: "60"
+      - key: REFRESH_TOKEN_EXPIRE_DAYS
+        value: "7"
+      - key: ALLOWED_ORIGINS
+        value: "https://summarizeai-frontend.onrender.com"
+      - key: UPLOAD_DIR
+        value: uploads
+      - key: MAX_UPLOAD_SIZE_MB
+        value: "10"
+      - key: ADMIN_USERNAME
+        sync: false
+      - key: ADMIN_EMAIL
+        sync: false
+      - key: ADMIN_PASSWORD
+        sync: false
+      - key: SMTP_HOST
+        sync: false
+      - key: SMTP_PORT
+        sync: false
+      - key: SMTP_USER
+        sync: false
+      - key: SMTP_PASSWORD
+        sync: false
+      - key: SMTP_FROM
+        sync: false
+
+  # ── Frontend (React + Vite, static) ─────────────────────────────────────
+  - type: web
+    name: summarizeai-frontend
+    runtime: static
+    rootDir: frontend
+    buildCommand: "npm install && npm run build"
+    staticPublishPath: dist
+    envVars:
+      - key: VITE_WS_URL
+        value: "wss://summarizeai-backend.onrender.com"
+    routes:
+      # Proxy REST calls straight through to the backend service
+      - type: rewrite
+        source: /api/*
+        destination: "https://summarizeai-backend.onrender.com/api/:splat"
+      # Proxy uploaded file/avatar requests to the backend service
+      - type: rewrite
+        source: /uploads/*
+        destination: "https://summarizeai-backend.onrender.com/uploads/:splat"
+      # SPA fallback so client-side routing works on refresh/deep links
+      - type: rewrite
+        source: /*
+        destination: /index.html

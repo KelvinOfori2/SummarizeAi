@@ -253,6 +253,24 @@ The interactive API docs are available while the backend is running:
 
 ---
 
+## Deployment (Render)
+
+This repo includes a [render.yaml](render.yaml) Blueprint that provisions all three pieces on [Render](https://render.com) in one shot:
+
+- **`summarizeai-db`** — a managed PostgreSQL database
+- **`summarizeai-backend`** — a Python web service running the FastAPI app (`uvicorn app.main:app`), running `alembic upgrade head` on every deploy
+- **`summarizeai-frontend`** — a static site built with `npm run build`, with rewrite rules that proxy `/api/*` and `/uploads/*` to the backend and fall back to `/index.html` for client-side routing
+
+### Steps
+
+1. Push this repo to GitHub/GitLab.
+2. In the Render dashboard: **New > Blueprint**, select the repo. Render reads `render.yaml` and creates all three resources.
+3. After the first deploy, open the `summarizeai-backend` service settings and fill in the env vars marked `sync: false`: `ADMIN_USERNAME`, `ADMIN_EMAIL`, `ADMIN_PASSWORD`, and (optionally) the `SMTP_*` vars for password-reset emails.
+4. Render assigns each service a URL of the form `https://<service-name>.onrender.com`. If either service gets a different name/suffix than `summarizeai-backend` / `summarizeai-frontend` (e.g. because the name was taken), update the hardcoded URLs in `render.yaml` — the backend's `ALLOWED_ORIGINS`, and the frontend's `VITE_WS_URL` and rewrite `destination` values — to match, then redeploy.
+5. Uploaded files (avatars) are written to local disk on the backend service, which is ephemeral on Render's free plan — attach a persistent [Render Disk](https://render.com/docs/disks) to `summarizeai-backend` mounted at `uploads` if avatars need to survive restarts/deploys.
+
+---
+
 ## Tech Stack
 
 Backend: Python 3.11, FastAPI, SQLAlchemy, PostgreSQL, NLTK, Scikit-learn, Sumy, JWT
