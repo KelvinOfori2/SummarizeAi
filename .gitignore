@@ -39,3 +39,6 @@ Thumbs.db
 *.lot
 *.bbl
 *.blg
+
+# Local database
+backend/summarize_ai.db
