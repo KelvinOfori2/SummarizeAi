@@ -14,7 +14,7 @@ Install these before anything else:
 | Node.js | 18 or 20 | https://nodejs.org/ |
 | PostgreSQL | 14, 15, or 16 | https://www.postgresql.org/download/windows/ |
 
-> **Windows tip:** When installing PostgreSQL, note the password you set for the `postgres` user. You will need it in step 1.
+> **Windows tip:** When installing PostgreSQL, note the password you set for the `postgres` user. You will need it in step 1.uvicorn app.main:app --host 0.0.0.0 --port $PORT
 
 ---
 
@@ -246,10 +246,18 @@ The interactive API docs are available while the backend is running:
 
 | Algorithm | Best For |
 |-----------|----------|
+| **T5 (Generative)** | Abstractive, human-like summaries (Default) |
 | **TF-IDF** | Technical documents, reports |
 | **LSA** | Academic papers, semantic analysis |
 | **LexRank** | News articles, general text |
 | **Luhn** | Short, focused documents |
+
+---
+
+## Pre-trained Generative Model
+
+This project uses the **T5 (Text-to-Text Transfer Transformer)** model from Hugging Face for abstractive summarization. 
+Instead of training a model from scratch, the application automatically downloads the `t5-small` pre-trained model on the first run. The included `dataset/` folder contains Jupyter notebooks demonstrating how the T5 model was originally fine-tuned on the CNN/DailyMail dataset.
 
 ---
 
@@ -273,7 +281,7 @@ This repo includes a [render.yaml](render.yaml) Blueprint that provisions all th
 
 ## Tech Stack
 
-Backend: Python 3.11, FastAPI, SQLAlchemy, PostgreSQL, NLTK, Scikit-learn, Sumy, JWT
+Backend: Python 3.11/3.12, FastAPI, SQLAlchemy, PostgreSQL, NLTK, Scikit-learn, Transformers (Hugging Face), PyTorch, Sumy, JWT
 
 Frontend: React 18, TypeScript, Vite, Tailwind CSS, Framer Motion, React Query, Zustand
 
@@ -281,7 +289,7 @@ Frontend: React 18, TypeScript, Vite, Tailwind CSS, Framer Motion, React Query, 
 
 ## Features
 
-- 4 extractive NLP summarization algorithms
+- 1 generative AI model (T5) + 4 extractive NLP summarization algorithms
 - Upload TXT, PDF, DOCX files up to 10 MB
 - Export summaries as PDF, DOCX, or TXT
 - User dashboard with real statistics

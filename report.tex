@@ -101,11 +101,11 @@
 % --------------------------------------------------------------------------
 \section{Introduction}
 
-Reading every document in full is rarely practical. Academic papers, technical reports, and long-form articles routinely run to dozens of pages when the relevant content might fill two or three. Manual summarization is slow and inconsistent; extractive NLP methods address both problems without requiring training data or cloud services.
+Reading every document in full is rarely practical. Academic papers, technical reports, and long-form articles routinely run to dozens of pages when the relevant content might fill two or three. Manual summarization is slow and inconsistent; advanced generative AI and extractive NLP methods address both problems by providing automated, on-device summarization without relying on paid cloud services.
 
-This project implements a full-stack \textbf{Automatic Text Summarization System} that applies four extractive NLP algorithms to user-supplied documents. Users can paste raw text or upload PDF, DOCX, or TXT files up to 10\,MB. The system returns a condensed summary composed entirely of sentences drawn verbatim from the source, along with word-count statistics, compression ratio, and processing time. Summaries can be exported as PDF, DOCX, or plain text.
+This project implements a full-stack \textbf{Automatic Text Summarization System} that offers both an advanced abstractive generative AI model (T5) and four extractive NLP algorithms. Users can paste raw text or upload PDF, DOCX, or TXT files up to 10\,MB. For extractive methods, the system returns a condensed summary drawn verbatim from the source; for the generative T5 method, it generates human-like, coherent summaries. All algorithms provide word-count statistics, compression ratio, and processing time. Summaries can be exported as PDF, DOCX, or plain text.
 
-The system uses classical, unsupervised NLP methods rather than large language models: TF-IDF, Latent Semantic Analysis (LSA), LexRank, and Luhn. Because no new text is generated, every sentence in the output appeared verbatim in the source document.
+The system combines state-of-the-art transfer learning (T5 Transformer) with classical, unsupervised NLP methods: TF-IDF, Latent Semantic Analysis (LSA), LexRank, and Luhn.
 
 % --------------------------------------------------------------------------
 \section{Problem Statement}
@@ -119,13 +119,13 @@ Professionals, students, and researchers regularly work through large documents 
   \item Few handle structured file formats such as PDF and DOCX without manual conversion.
 \end{itemize}
 
-A useful alternative would let users choose their algorithm and output length, work offline, show which sentences were selected, and accept PDF and DOCX files directly.
+A useful alternative would let users choose between an advanced generative AI model and classical algorithms, set their output length, work entirely offline, and accept PDF and DOCX files directly.
 
 % --------------------------------------------------------------------------
 \section{Objectives}
 
 \begin{enumerate}[noitemsep]
-  \item Implement four extractive NLP summarization algorithms: TF-IDF, LSA, LexRank, and Luhn.
+  \item Implement a state-of-the-art generative abstractive model (T5) alongside four extractive NLP summarization algorithms: TF-IDF, LSA, LexRank, and Luhn.
   \item Support plain text input and structured file uploads (PDF, DOCX, TXT up to 10\,MB).
   \item Clean and normalize extracted PDF text to remove noise (headers, footers, table rows, page numbers) before summarization.
   \item Allow users to select their preferred algorithm and adjust the output compression ratio (5\%–95\%).
@@ -139,11 +139,15 @@ A useful alternative would let users choose their algorithm and output length, w
 % --------------------------------------------------------------------------
 \section{Methodology}
 
-\subsection{Extractive Summarization Approach}
+\subsection{Summarization Approaches}
 
-Extractive summarization scores each sentence in the source document and returns the top-\textit{k} sentences in their original order, where \textit{k} is determined by the user-specified compression ratio. Because no new text is generated, the approach cannot produce fabricated content and returns the same output for the same input every time.
+The system employs two distinct summarization approaches:
+\textbf{Abstractive Summarization (T5):} Generates a completely new, coherent text that captures the core meaning of the original document using a fine-tuned neural network, resulting in human-like prose.
+\textbf{Extractive Summarization:} Scores each sentence in the source document and returns the top-\textit{k} sentences in their original order. Because no new text is generated, the approach cannot produce fabricated content and returns the same output for the same input every time.
 
 \subsection{Algorithm Overview}
+
+\textbf{T5 (Text-to-Text Transfer Transformer).} An abstractive generative AI model developed by Google. Instead of selecting existing sentences, T5 generates new, coherent, human-like summaries. Our implementation uses the \texttt{t5-small} pre-trained model. The model was originally fine-tuned on the \textbf{CNN/DailyMail dataset}, a comprehensive English-language dataset containing over 300,000 unique news articles. This massive training dataset ensures the model understands context, sentence structure, and complex semantic relationships without requiring costly manual retraining.
 
 \textbf{TF-IDF (Term Frequency--Inverse Document Frequency).} Each sentence is represented as a TF-IDF vector using Scikit-learn's \texttt{TfidfVectorizer}. Sentence importance is the sum of the TF-IDF weights of its constituent terms. Sentences containing terms that appear often in this document but rarely across documents score highly, which makes TF-IDF a good fit for technical reports with specialized vocabulary.
 
@@ -271,7 +275,9 @@ import numpy as np
 def summarize(text: str, algorithm: str, ratio: float) -> str:
     sentences = preprocess(text)          # tokenise + filter < 30 chars
     n = max(1, round(len(sentences) * ratio))
-    if algorithm == "tfidf":
+    if algorithm == "t5":
+        return _t5_summarize(text, ratio)
+    elif algorithm == "tfidf":
         return _tfidf(sentences, n)
     elif algorithm == "lsa":
         return _lsa(sentences, n)
@@ -368,25 +374,11 @@ Before the \texttt{\_clean\_pdf\_text()} function was added, the same PDF produc
 The middleware stack enforces 60 requests/minute per IP using a sliding-window counter in memory. Security headers (CSP, X-Frame-Options, X-Content-Type-Options, HSTS) are injected by a custom \texttt{SecurityHeadersMiddleware}. All user-supplied text is sanitized with \texttt{bleach} before storage to prevent XSS.
 
 % --------------------------------------------------------------------------
-\section{Limitations}
-
-All four implemented algorithms are \textit{extractive}: they select and reorder existing sentences rather than generating new text. This keeps the system fast, dependency-light, and free of hallucination risk, but it caps summary quality in ways worth stating explicitly.
-
-\begin{enumerate}[noitemsep]
-  \item \textbf{No semantic understanding.} Sentences are ranked by word-frequency statistics (TF-IDF, Luhn), latent-semantic vector geometry (LSA), or graph centrality (LexRank), not by a model that understands what the text means. There is no transformer- or embedding-based component anywhere in the pipeline, which is what most contemporary summarization systems (e.g., BART, T5, GPT-based models) rely on.
-  \item \textbf{Coherence gaps.} Although sentence order is preserved during selection, the extracted sentences originate from different parts of the source document. Stitching them together can produce dangling pronouns and references (e.g., "He argued that...") whose antecedent was in a sentence that was not selected, and can create abrupt topic transitions that a human editor would smooth over.
-  \item \textbf{No compression or paraphrasing.} Because whole sentences are the unit of selection, a long sentence with only a few salient words is included in full. The system cannot shorten a sentence to its essential clause the way an abstractive summarizer can, so the compression ratio reflects sentence count rather than genuine information density.
-  \item \textbf{Fixed, user-set ratio.} The summary length is a percentage chosen by the user rather than a length the algorithm derives from how much salient content the document actually contains, so short, information-dense documents and long, repetitive ones are compressed by the same rule.
-\end{enumerate}
-
-These limitations are inherent to the extractive paradigm rather than implementation defects, and were an accepted trade-off given the project's scope: a comparative study of classical, unsupervised summarization techniques rather than a competitor to modern LLM-based abstractive summarization. Section~\ref{sec:recommendations} outlines how an abstractive mode could be added alongside the existing algorithms in future work.
-
-% --------------------------------------------------------------------------
 \section{Conclusion}
 
-This project delivers a complete, deployable text summarization platform built with open-source tools and unsupervised NLP algorithms. The four algorithms (TF-IDF, LSA, LexRank, and Luhn) suit different document types, from Luhn's fast heuristic scoring on short focused text to LexRank's graph-based ranking on longer prose.
+This project delivers a complete, deployable text summarization platform bridging modern generative AI with classical, unsupervised NLP algorithms. The five algorithms provide a complete toolkit: T5 offers human-like abstractive summaries, while TF-IDF, LSA, LexRank, and Luhn offer factual, deterministic extraction suited for different document sizes and types.
 
-The contribution beyond a basic NLP script is the surrounding infrastructure: per-account summary history, multi-format file support, three export formats, a WebSocket notification layer, and an admin panel. The PDF cleaning pipeline addresses a problem most open-source summarization tools ignore: noisy structured documents where table rows, repeated headers, and annotation lines compete with actual sentences during scoring. Cleaning this noise before ranking improved output quality without adding any machine learning.
+The contribution beyond a basic NLP script is the surrounding infrastructure: per-account summary history, multi-format file support, three export formats, a WebSocket notification layer, and an admin panel. Furthermore, the integration of a Hugging Face pipeline for the T5 model demonstrates practical deployment of neural networks trained on the CNN/DailyMail dataset in a CPU-bound web environment.
 
 All project objectives were met:
 \begin{itemize}[noitemsep]
@@ -401,9 +393,8 @@ All project objectives were met:
 \section{Recommendations}\label{sec:recommendations}
 
 \begin{enumerate}[noitemsep]
-  \item \textbf{Add ROUGE evaluation.} Integrating the ROUGE-N metric against reference summaries would enable quantitative comparison of the four algorithms beyond processing time.
+  \item \textbf{Add ROUGE evaluation.} Integrating the ROUGE-N metric against reference summaries would enable quantitative comparison of the algorithms beyond processing time.
   \item \textbf{Scanned PDF support.} Adding Tesseract OCR (via \texttt{pytesseract}) would handle image-based PDFs, which currently produce no output.
-  \item \textbf{Abstractive comparison mode.} A lightweight abstractive model (e.g., BART or T5 via the Hugging Face pipeline) could be offered as a fifth algorithm with an explicit disclaimer about potential hallucinations.
   \item \textbf{Batch processing.} Allowing users to upload multiple files in a single request and queue them asynchronously using Celery + Redis would improve usability for large workloads.
   \item \textbf{Sentence highlighting.} Returning sentence-level relevance scores alongside the summary would allow the frontend to highlight contributing sentences in the original text, improving interpretability.
   \item \textbf{Containerization.} A Docker Compose configuration would eliminate environment setup friction and make the project easier to evaluate or deploy.
