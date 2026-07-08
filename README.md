@@ -257,7 +257,8 @@ The interactive API docs are available while the backend is running:
 ## Pre-trained Generative Model
 
 This project uses the **T5 (Text-to-Text Transfer Transformer)** model from Hugging Face for abstractive summarization. 
-Instead of training a model from scratch, the application automatically downloads the `t5-small` pre-trained model on the first run. The included `dataset/` folder contains Jupyter notebooks demonstrating how the T5 model was originally fine-tuned on the CNN/DailyMail dataset.
+Instead of training a model from scratch, the application automatically downloads the `t5-small` pre-trained model on the first run. The included `dataset/` folder contains Jupyter notebooks demonstrating how the T5 model was originally fine-tuned on the [CNN/DailyMail dataset](https://www.kaggle.com/gowrishankarp/newspaper-text-summarization-cnn-dailymail) (also available on Hugging Face as [abisee/cnn_dailymail](https://huggingface.co/datasets/abisee/cnn_dailymail)).
+
 
 ---
 
