@@ -9,6 +9,7 @@ import axios from 'axios'
 import { Zap, Upload, FileText, X, ChevronDown, Copy, Download, BarChart2, Clock, Layers } from 'lucide-react'
 
 const ALGORITHMS = [
+  { id: 't5',      label: 'T5 (Generative)', desc: 'Abstractive summary using T5 model' },
   { id: 'tfidf',   label: 'TF-IDF',   desc: 'Good for technical and structured documents' },
   { id: 'lsa',     label: 'LSA',      desc: 'Captures latent semantic relationships'       },
   { id: 'lexrank', label: 'LexRank',  desc: 'Graph-based, works well for news & articles'  },
@@ -17,9 +18,9 @@ const ALGORITHMS = [
 
 const PROCESSING_STEPS = [
   'Reading document…',
-  'Tokenizing sentences…',
-  'Scoring importance…',
-  'Assembling summary…',
+  'Tokenizing input…',
+  'Generating abstractive summary…',
+  'Decoding response…',
 ]
 
 function ProcessingPanel() {
@@ -51,29 +52,55 @@ export default function Summarize() {
   const [tab, setTab] = useState<'text' | 'file'>('text')
   const [text, setText] = useState('')
   const [file, setFile] = useState<File | null>(null)
-  const [algorithm, setAlgorithm] = useState('tfidf')
+  const [algorithm, setAlgorithm] = useState('t5')
   const [ratio, setRatio] = useState(0.3)
   const [title, setTitle] = useState('')
   const [result, setResult] = useState<any>(null)
   const [showAlgoMenu, setShowAlgoMenu] = useState(false)
   const [showExportModal, setShowExportModal] = useState(false)
+  const [isWaiting, setIsWaiting] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
   const wordCount = text.trim().split(/\s+/).filter(Boolean).length
 
+  useEffect(() => {
+    const handleWSSummary = (e: any) => {
+      setResult(e.detail)
+      setIsWaiting(false)
+      toast.success('Done')
+    }
+    window.addEventListener('summary_created', handleWSSummary)
+    return () => window.removeEventListener('summary_created', handleWSSummary)
+  }, [])
+
   const textMutation = useMutation({
     mutationFn: () => summariesApi.create({ text, algorithm, summary_ratio: ratio, title: title || undefined }),
-    onSuccess: (res) => { setResult(res.data); toast.success('Done') },
-    onError: (err) => { if (axios.isAxiosError(err)) toast.error(err.response?.data?.detail || 'Failed'); else toast.error('Something went wrong') },
+    onSuccess: (res) => { 
+      if (res.data?.status === 'processing') setIsWaiting(true)
+      else { setResult(res.data); toast.success('Done') }
+    },
+    onError: (err) => { 
+      setIsWaiting(false)
+      if (axios.isAxiosError(err)) toast.error(err.response?.data?.detail || 'Failed')
+      else toast.error('Something went wrong') 
+    },
   })
   const fileMutation = useMutation({
     mutationFn: () => summariesApi.uploadFile(file!, algorithm, ratio, title || undefined),
-    onSuccess: (res) => { setResult(res.data); toast.success('Done') },
-    onError: (err) => { if (axios.isAxiosError(err)) toast.error(err.response?.data?.detail || 'Failed'); else toast.error('Something went wrong') },
+    onSuccess: (res) => { 
+      if (res.data?.status === 'processing') setIsWaiting(true)
+      else { setResult(res.data); toast.success('Done') }
+    },
+    onError: (err) => { 
+      setIsWaiting(false)
+      if (axios.isAxiosError(err)) toast.error(err.response?.data?.detail || 'Failed')
+      else toast.error('Something went wrong') 
+    },
   })
 
-  const loading = textMutation.isPending || fileMutation.isPending
+  const loading = textMutation.isPending || fileMutation.isPending || isWaiting
 
   const handleSubmit = () => {
+    setResult(null)
     if (tab === 'text') {
       if (text.trim().length < 50) { toast.error('Text is too short (minimum 50 characters)'); return }
       textMutation.mutate()

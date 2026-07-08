@@ -94,6 +94,9 @@ export function useWebSocket() {
         case 'summary_deleted':
           qc.invalidateQueries({ queryKey: ['summaries'] })
           qc.invalidateQueries({ queryKey: ['user-stats'] })
+          if (msg.type === 'summary_created') {
+            window.dispatchEvent(new CustomEvent('summary_created', { detail: msg.data }))
+          }
           break
 
         // Push new stats directly into the cache (zero extra HTTP call)

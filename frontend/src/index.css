@@ -72,6 +72,7 @@
   .badge {
     @apply inline-flex items-center px-2 py-0.5 rounded text-xs font-mono border;
   }
+  .badge-blue   { @apply bg-dark-800 text-blue-400 border-dark-700; }
   .badge-teal   { @apply bg-dark-800 text-brand-400 border-dark-700; }
   .badge-purple { @apply bg-dark-800 text-violet-400 border-dark-700; }
   .badge-amber  { @apply bg-dark-800 text-amber-400 border-dark-700; }

@@ -114,11 +114,12 @@ export function PageHeader({ title, subtitle, action }: { title: string; subtitl
 // ── AlgoBadge ────────────────────────────────────────────────────────────────
 export function AlgoBadge({ algorithm }: { algorithm: string }) {
   const map: Record<string, string> = {
+    t5:      'badge badge-blue',
     tfidf:   'badge badge-teal',
     lsa:     'badge badge-purple',
     lexrank: 'badge badge-amber',
     luhn:    'badge badge-green',
   }
-  const labels: Record<string, string> = { tfidf: 'TF-IDF', lsa: 'LSA', lexrank: 'LexRank', luhn: 'Luhn' }
+  const labels: Record<string, string> = { t5: 'T5 (Gen)', tfidf: 'TF-IDF', lsa: 'LSA', lexrank: 'LexRank', luhn: 'Luhn' }
   return <span className={map[algorithm] || 'badge badge-teal'}>{labels[algorithm] || algorithm}</span>
 }
