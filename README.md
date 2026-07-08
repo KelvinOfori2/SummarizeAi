@@ -73,13 +73,16 @@ psql -U postgres -c "CREATE DATABASE summarize_ai;"
 Open a terminal in the `backend` folder:
 
 ```cmd
-cd summarize-ai\backend
-pip install -r requirements.txt
-```
+cd backend
+# Recommended: Use uv for modern package management
+uv venv --python 3.12
+# On Linux/macOS:
+source .venv/bin/activate
+# On Windows:
+.venv\Scripts\activate
 
-> If you see errors about Visual C++ or build tools, install the
-> [Microsoft C++ Build Tools](https://visualstudio.microsoft.com/visual-cpp-build-tools/)
-> then re-run the pip command.
+uv pip install -r requirements.txt
+```
 
 ---
 
@@ -124,7 +127,7 @@ You should see:
 Open a **second terminal** in the `frontend` folder:
 
 ```cmd
-cd summarize-ai\frontend
+cd frontend
 npm install
 ```
 
@@ -254,10 +257,26 @@ The interactive API docs are available while the backend is running:
 
 ---
 
-## Pre-trained Generative Model
+## Generative AI & Model Fine-tuning
 
-This project uses the **T5 (Text-to-Text Transfer Transformer)** model from Hugging Face for abstractive summarization. 
-Instead of training a model from scratch, the application automatically downloads the `t5-small` pre-trained model on the first run. The included `dataset/` folder contains Jupyter notebooks demonstrating how the T5 model was originally fine-tuned on the [CNN/DailyMail dataset](https://www.kaggle.com/datasets/gowrishankarp/newspaper-text-summarization-cnn-dailymail) (also available on Hugging Face as [abisee/cnn_dailymail](https://huggingface.co/datasets/abisee/cnn_dailymail)).
+This project features a hybrid **LexRank → T5 (Text-to-Text Transfer Transformer)** abstractive pipeline. 
+
+### Hybrid Map-Reduce Pipeline
+To summarize long documents without running into the T5 context window limit:
+1. The text is chunked and fed into the T5 transformer model.
+2. The resulting summaries are stitched together, and a recursive pass is made if necessary to ensure the summary strictly respects your target length.
+3. **WebSocket-powered Background Tasks:** Because generative summaries on long files can take some time on CPU, requests immediately return a `202 Accepted` processing status. The backend processes the summarization as a background task and pushes the final result to your React client in real time via **WebSockets**.
+
+### Local Fine-Tuning (CPU)
+You can fine-tune the model locally on your CPU using a subset of the **CNN/DailyMail dataset**:
+1. Run the fine-tuning script:
+   ```bash
+   cd backend
+   .venv/bin/python train_t5.py
+   ```
+2. The script configures training parameters (default: 8% dataset split, ~22.9k examples, 3 epochs). You can adjust this split (e.g., to 50% for high quality, or 1% for a quick test) by editing the `DATASET_PCT` parameter inside the script.
+3. Once completed, the fine-tuned weights are saved to `ml_models/t5-finetuned/`.
+4. The backend server automatically detects and hot-swaps to this fine-tuned model for all future abstractive requests without needing a server restart!
 
 
 ---
@@ -282,9 +301,9 @@ This repo includes a [render.yaml](render.yaml) Blueprint that provisions all th
 
 ## Tech Stack
 
-Backend: Python 3.11/3.12, FastAPI, SQLAlchemy, PostgreSQL, NLTK, Scikit-learn, Transformers (Hugging Face), PyTorch, Sumy, JWT
+Backend: Python 3.11/3.12, FastAPI, SQLAlchemy, PostgreSQL, NLTK, Scikit-learn, Transformers (Hugging Face), PyTorch, Datasets, Accelerate, Sumy, JWT, WebSockets, UV
 
-Frontend: React 18, TypeScript, Vite, Tailwind CSS, Framer Motion, React Query, Zustand
+Frontend: React 19, TypeScript, Vite, Tailwind CSS, Framer Motion, React Query v5, Zustand
 
 ---
 
