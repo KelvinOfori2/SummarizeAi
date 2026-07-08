@@ -390,18 +390,6 @@ All project objectives were met:
 \end{itemize}
 
 % --------------------------------------------------------------------------
-\section{Recommendations}\label{sec:recommendations}
-
-\begin{enumerate}[noitemsep]
-  \item \textbf{Add ROUGE evaluation.} Integrating the ROUGE-N metric against reference summaries would enable quantitative comparison of the algorithms beyond processing time.
-  \item \textbf{Scanned PDF support.} Adding Tesseract OCR (via \texttt{pytesseract}) would handle image-based PDFs, which currently produce no output.
-  \item \textbf{Batch processing.} Allowing users to upload multiple files in a single request and queue them asynchronously using Celery + Redis would improve usability for large workloads.
-  \item \textbf{Sentence highlighting.} Returning sentence-level relevance scores alongside the summary would allow the frontend to highlight contributing sentences in the original text, improving interpretability.
-  \item \textbf{Containerization.} A Docker Compose configuration would eliminate environment setup friction and make the project easier to evaluate or deploy.
-  \item \textbf{Language support.} NLTK supports several non-English tokenizers; exposing a language selector would make the system useful to a broader audience.
-\end{enumerate}
-
-% --------------------------------------------------------------------------
 \section*{References}
 \addcontentsline{toc}{section}{References}
 
