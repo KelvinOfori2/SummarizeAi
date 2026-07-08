@@ -13,6 +13,7 @@ from app.services.nlp.tfidf    import summarize_tfidf
 from app.services.nlp.lsa      import summarize_lsa
 from app.services.nlp.lexrank  import summarize_lexrank
 from app.services.nlp.luhn     import summarize_luhn
+from app.services.nlp.t5_summarizer import summarize_t5
 from app.services.file_service import extract_text_from_file
 from app.core.sanitization import validate_text_input
 from app.core.logging import get_logger
@@ -24,6 +25,7 @@ ALGORITHM_MAP = {
     "lsa":     summarize_lsa,
     "lexrank": summarize_lexrank,
     "luhn":    summarize_luhn,
+    "t5":      summarize_t5,
 }
 
 
@@ -41,6 +43,8 @@ def _summary_dict(record: Summary) -> dict:
         "id":                  record.id,
         "title":               record.title,
         "algorithm":           record.algorithm,
+        "summary_text":        record.summary_text,
+        "original_text":       record.original_text,
         "original_word_count": record.original_word_count,
         "summary_word_count":  record.summary_word_count,
         "compression_ratio":   record.compression_ratio,
@@ -221,3 +225,47 @@ def delete_summary(db: Session, summary_id: str, user_id: str) -> bool:
         pass
 
     return True
+
+def _background_job(user_id: str, text: str, algorithm: str, ratio: float, title: str, source_type: str, file_name: Optional[str] = None, loop=None):
+    from app.db.session import SessionLocal
+    db = SessionLocal()
+    try:
+        summary_text, proc_time = run_summarization(text, algorithm, ratio)
+        orig_words = count_words(text)
+        summ_words = count_words(summary_text)
+        comp_ratio = round(summ_words / orig_words, 4) if orig_words else 0.0
+
+        record = Summary(
+            user_id=user_id, title=title,
+            original_text=text, summary_text=summary_text,
+            algorithm=algorithm,
+            original_word_count=orig_words, summary_word_count=summ_words,
+            compression_ratio=comp_ratio, processing_time=proc_time,
+            source_type=source_type, file_name=file_name,
+        )
+        db.add(record)
+        db.commit()
+        db.refresh(record)
+
+        d = _summary_dict(record)
+        
+        if loop is not None:
+            import asyncio
+            from app.api.v1.websocket import manager
+            asyncio.run_coroutine_threadsafe(manager.send_to_user(user_id, "summary_created", d), loop)
+            asyncio.run_coroutine_threadsafe(manager.broadcast_admins("summary_created", {**d, "user_id": user_id}), loop)
+            try:
+                from app.services.user_service import get_user_stats
+                stats = get_user_stats(db, user_id)
+                asyncio.run_coroutine_threadsafe(manager.send_to_user(user_id, "stats_updated", stats), loop)
+            except Exception:
+                pass
+        else:
+            _ws_emit(user_id, "summary_created", d)
+            _ws_emit_admin("summary_created", {**d, "user_id": user_id})
+
+    except Exception as e:
+        logger.error(f"Background summarization failed: {e}")
+    finally:
+        db.close()
+

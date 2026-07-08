@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, UploadFile, File, Form, Query, Request
+from fastapi import APIRouter, Depends, UploadFile, File, Form, Query, Request, BackgroundTasks
 from sqlalchemy.orm import Session
 from typing import Optional
 
@@ -13,31 +13,62 @@ from app.middleware.rate_limiter import limiter
 router = APIRouter(prefix="/summaries", tags=["Summaries"])
 
 
-@router.post("/", response_model=SummaryResponse, status_code=201)
+@router.post("/", status_code=202)
 @limiter.limit("30/minute")
 async def create_summary(
     request: Request,
     payload: SummarizeTextRequest,
-    db: Session = Depends(get_db),
+    background_tasks: BackgroundTasks,
     current_user: User = Depends(get_current_user),
 ):
-    return summary_service.create_summary_from_text(db, current_user.id, payload)
+    import asyncio
+    from app.core.sanitization import validate_text_input
+    from fastapi import HTTPException
+    try:
+        cleaned = validate_text_input(payload.text)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+    title = payload.title or (cleaned[:60] + "\u2026" if len(cleaned) > 60 else cleaned)
+    loop = asyncio.get_event_loop()
+    background_tasks.add_task(
+        summary_service._background_job,
+        current_user.id, cleaned, payload.algorithm, payload.summary_ratio, title, "text", None, loop
+    )
+    return {"status": "processing", "message": "Started in background"}
 
 
-@router.post("/upload", response_model=SummaryResponse, status_code=201)
+@router.post("/upload", status_code=202)
 @limiter.limit("15/minute")
 async def create_summary_from_file(
     request: Request,
+    background_tasks: BackgroundTasks,
     file: UploadFile = File(...),
     algorithm: str = Form("tfidf"),
     summary_ratio: float = Form(0.3),
     title: Optional[str] = Form(None),
-    db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    return summary_service.create_summary_from_file(
-        db, current_user.id, file, algorithm, summary_ratio, title
+    import asyncio
+    from app.services.file_service import extract_text_from_file
+    from app.core.sanitization import validate_text_input
+    from fastapi import HTTPException
+
+    extracted = extract_text_from_file(file)
+    try:
+        cleaned = validate_text_input(extracted)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+    ext = file.filename.rsplit(".", 1)[-1].lower() if file.filename and "." in file.filename else "txt"
+    record_title = title or file.filename or cleaned[:60]
+
+    loop = asyncio.get_event_loop()
+    background_tasks.add_task(
+        summary_service._background_job,
+        current_user.id, cleaned, algorithm, summary_ratio, record_title, ext, file.filename, loop
     )
+    return {"status": "processing", "message": "Started in background"}
 
 
 @router.get("/", response_model=PaginatedSummaries)
